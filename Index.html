@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pretest-kalkylator för kroniskt koronart syndrom</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .slidecontainer {
+			   width: 100%; /* Width of the outside container */
+		  }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .form-group input[type="number"] {
+            width: 20%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+            background-color: #e6f7ff;
+            text-align: center;
+        }
+        .adjustment-statement {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff4e6;
+            border-left: 4px solid #ffa500;
+            font-style: italic;
+        }
+        .citation-box {
+            margin-top: 40px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-left: 4px solid #007BFF;
+            font-size: 14px;
+            font-style: italic;
+        }
+        .hidden {
+            display: none;
+        }
+			.color-range{
+  				position: relative;
+  				z-index: 1;
+  				appearance: none;
+  				border-radius: 0.5em;
+  				background-color: rgba(0,0,0,0.1);
+  				height: 0.5em;
+  				width: 66%;
+  				display: block;
+  				outline: none;
+  				margin: 1rem auto;
+  				transition: color 0.05s linear;
+  				background: linear-gradient(to left, rgb(255,0,0), rgb(255,255,0), rgb(0,255,0));
+  				&:focus{
+    			outline: none;
+  				}
+  				&:active,
+  				&:hover:active{
+    			cursor: grabbing;
+    			cursor: -webkit-grabbing;
+ 				}
+  				&::-moz-range-track{
+    			appearance: none;
+    			opacity: 0;
+    			outline: none !important;
+  				}
+  				&::-ms-track{
+    			outline: none !important;
+    			appearance: none;
+    			opacity: 0;
+  				}
+
+  				&::-webkit-slider-thumb{
+    			height: 3em;
+    			width: 3em;
+    			border-radius: 2em;
+    			appearance: none;
+    			background: white;
+    			cursor: pointer;
+    			cursor: move;
+    			cursor: grab;
+    			cursor: -webkit-grab;
+    			border: 0.4em solid currentColor;
+    			transition: border 0.1s ease-in-out,box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
+    			box-shadow: 0 0.4em 1em rgba(0,0,0,0.15);
+    			&:active,
+    			&:hover:active{
+      		cursor: grabbing;
+      		cursor: -webkit-grabbing;
+      		transform: scale(0.975);
+      		box-shadow: 0 0 1px rgba(0,0,0,0.1);
+      		border: 1.5em solid currentColor;
+    			}
+    			&:hover{
+      		transform: scale(1.1);
+      		box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    			}
+  				&::-moz-range-thumb{
+    			height: 3em;
+    			width: 3em;
+    			border-radius: 2em;
+    			appearance: none;
+    			background: white;
+    			border: 0.4em solid currentColor;
+    			cursor: pointer;
+    			cursor: move;
+    			cursor: grab;
+    			cursor: -webkit-grab;
+    			transition: box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
+    			box-shadow: 0 1px 11px rgba(0,0,0,0);
+    			&:active,
+    			&:hover:active{
+      		cursor: grabbing;
+      		cursor: -webkit-grabbing;
+      		transform: scale(0.975);
+      		box-shadow: 0 0 1px rgba(0,0,0,0.1);
+    			}
+    			&:hover{
+      		transform: scale(1.1);
+      		box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    			}
+  }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kalkylator för pretest-sannolikhet (PTP)</h1>
+
+    <!-- Sex Selection -->
+    <div class="form-group">
+        <label for="sex">Kön:</label>
+        <input type="Radio" Name="Gender" id="male"> Man
+        <input type="Radio" Name="Gender" id="female"> Kvinna
+    </div>
+
+    <!-- Age Input -->
+    <div class="form-group">
+        <label for="age">Ålder (år):</label>
+        <input type="number" id="age" min="18" max="120" size="10" required>
+    </div>
+
+  <!-- Symptom Selection -->
+    <div class="form-group">
+        <label>Symptom:</label>
+        <input type="Radio" Name="Symtoms" id="symptom-chest-pain" onclick="toggleSymptomOptions()"> Bröstsmärta<br>
+        <input type="Radio" Name="Symtoms" id="symptom-dyspnea" onclick="toggleSymptomOptions()"> Dyspné<br>
+    </div>
+
+   <!-- Chest Pain Characteristics -->
+    <div id="chest-pain-options" class="form-group hidden">
+        <label>Symtomkaraktär - bröstsmärta (välj en eller flera):</label>
+        <input type="checkbox" id="pain1"> Typ och lokalisation: Tryckande obehag lokaliserat retrosternalt, i hals, käke, axel eller arm (1 poäng)<br>
+        <input type="checkbox" id="pain2"> Förvärras av fysisk eller emotionell stress (1 poäng)<br>
+        <input type="checkbox" id="pain3"> Lindras av vila eller nitroglycerin (inom 5 min) (1 poäng)<br>
+
+</div>
+<!-- Dyspnea Characteristics -->
+    <div id="dyspnea-options" class="form-group hidden">
+        <label>Symtomkaraktär - andfåddhet:</label>
+        <input type="checkbox" id="dyspnea"> Andfåddhet/svårighet att få luft som förvärras av fysisk ansträngning (2 poäng)<br>
+    </div>
+
+    <!-- Risk Factors -->
+    <div class="form-group">
+        <label>Riskfaktorer:</label>
+        <input type="checkbox" id="risk1"> Ärftlighet (1 poäng)<br>
+        <input type="checkbox" id="risk2"> Rökning (1 poäng)<br>
+        <input type="checkbox" id="risk3"> Dyslipidemi (1 poäng)<br>
+        <input type="checkbox" id="risk4"> Hypertension (1 poäng)<br>
+        <input type="checkbox" id="risk5"> Diabetes (1 poäng)<br>
+    </div>
+
+    <!-- Calculate Button -->
+    <button onclick="calculatePTP()">Beräkna PTP</button>
+
+    <!-- Result Display -->
+    <div id="result-container">			
+        <div id="result"><br></div>
+        
+         <div class="slidecontainer">
+  				<input type="range" min="0" max="100" value='ptp' class="color-range" id="resultslider" oninput = "changeValue(this.value)">
+  				<div id = "output"> </div>
+			</div>
+			
+    </div>
+
+    <!-- Adjustment Statement -->
+    <div class="adjustment-statement">
+        Överväg att justera den beräknade kliniska sannolikheten baserat på förekomst av: <br><br>
+Q-,ST-, eller T-vågsförändringar på vilo-EKG<br>
+Patologiska fynd vid arbetsprov<br>
+Vänsterkammardysfunktion<br>
+Ventrikulära arytmier<br>
+Perifer artärsjukdom<br>
+Sklerotiska kranskärlsförändringar på tidigare DT-thorax.<br>
+    </div>
+
+    <!-- Citation Box -->
+    <div class="citation-box">
+        Vrints et al. 2024 ESC Guidelines for the management of chronic coronary syndromes, Eur Heart J 2024. doi: 10.1093/eurheartj/ehae177
+    </div>
+</div>
+
+<script>
+    function toggleSymptomOptions() {
+        var isChestPainChecked = document.getElementById('symptom-chest-pain').checked;
+        var isDyspneaChecked = document.getElementById('symptom-dyspnea').checked;
+
+        document.getElementById('chest-pain-options').classList.toggle('hidden', !isChestPainChecked);
+        document.getElementById('dyspnea-options').classList.toggle('hidden', !isDyspneaChecked);
+    }
+
+    function calculatePTP() {
+        // Get inputs
+        var age = parseInt(document.getElementById('age').value);
+        var isMale = document.getElementById('male').checked;
+        var isFemale = document.getElementById('female').checked;
+		  var cbPain = document.getElementById('symptom-chest-pain').checked;
+		  var cbDyspnea = document.getElementById('symptom-dyspnea').checked;
+			
+			if (cbPain) {
+        		document.getElementById('dyspnea').checked = false;
+        		}
+        	if (cbDyspnea) {
+        		document.getElementById('pain1').checked = false;
+        		document.getElementById('pain2').checked = false;
+        		document.getElementById('pain3').checked = false;
+        	}
+        	
+        var dyspnea = document.getElementById('dyspnea').checked ? 2 : 0;
+		  var pain1 = document.getElementById('pain1').checked ? 1 : 0;
+        var pain2 = document.getElementById('pain2').checked ? 1 : 0;
+        var pain3 = document.getElementById('pain3').checked ? 1 : 0;
+        var risk1 = document.getElementById('risk1').checked ? 1 : 0;
+        var risk2 = document.getElementById('risk2').checked ? 1 : 0;
+        var risk3 = document.getElementById('risk3').checked ? 1 : 0;
+        var risk4 = document.getElementById('risk4').checked ? 1 : 0;
+        var risk5 = document.getElementById('risk5').checked ? 1 : 0;
+
+        // Calculate Symptom Score and Risk Factor Score
+        var symptomScore = Math.max(pain1 + pain2 + pain3, dyspnea);
+        var riskFactorScore = risk1 + risk2 + risk3 + risk4 + risk5;
+
+        // Calculate PTP based on input criteria
+        var ptp = 0;
+			 
+        if (isMale) {
+            if (symptomScore === 1) {
+                if (riskFactorScore <= 1) ptp = getMalePTP(age, [1, 2, 4, 8, 15]);
+                else if (riskFactorScore <= 3) ptp = getMalePTP(age, [2, 4, 7, 12, 17]);
+                else ptp = getMalePTP(age, [5, 8, 12, 17, 24]);
+            } else if (symptomScore === 2) {
+                if (riskFactorScore <= 1) ptp = getMalePTP(age, [2, 3, 6, 12, 20]);
+                else if (riskFactorScore <= 3) ptp = getMalePTP(age, [4, 6, 11, 17, 27]);
+                else ptp = getMalePTP(age, [8, 12, 17, 25, 34]);
+            } else if (symptomScore === 3) {
+                if (riskFactorScore <= 1) ptp = getMalePTP(age, [9, 14, 21, 32, 44]);
+                else if (riskFactorScore <= 3) ptp = getMalePTP(age, [14, 20, 27, 35, 44]);
+                else ptp = getMalePTP(age, [22, 27, 33, 39, 45]);
+            }
+        } else if (isFemale) {
+            if (symptomScore === 1) {
+                if (riskFactorScore <= 1) ptp = getFemalePTP(age, [0, 1, 1, 2, 4]);
+                else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [1, 1, 2, 4, 7]);
+                else ptp = getFemalePTP(age, [2, 3, 5, 7, 11]);
+            } else if (symptomScore === 2) {
+                if (riskFactorScore <= 1) ptp = getFemalePTP(age, [0, 1, 2, 3, 6]);
+                else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [1, 2,	 3, 6, 10]);
+                else ptp = getFemalePTP(age, [3, 5, 7, 11, 16]);
+            } else if (symptomScore === 3) {
+                if (riskFactorScore <= 1) ptp = getFemalePTP(age, [2, 4, 6, 10, 16]);
+                else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [5, 7, 10, 14, 19]);
+                else ptp = getFemalePTP(age, [10, 12, 15, 19, 23]);
+            }
+        }
+
+        // Display Result
+        var likelihood = getClinicalLikelihood(ptp);
+        document.getElementById('result').innerHTML = `Pretest-sannolikhet (PTP): ${ptp}%<br><br>Klinisk sannolikhet: ${likelihood}<br>`;
+		  document.getElementById('resultslider').value = ptp
+    }
+
+			//On Change Sliding bar
+	      var output = document.getElementById('output');
+	      
+      	function changeValue(newVal) {
+			  var likelihoodNew = getClinicalLikelihoodNew(newVal)         
+         output.innerHTML = `<br>Modifierad pretest-sannolikhet: ${newVal}%. Den nya kliniska sannolikheten är: ${likelihoodNew}`;
+     		}
+	
+    // Function to calculate PTP for males based on age
+    function getMalePTP(age, values) {
+        if (age >= 70) return values[4];
+        if (age >= 60) return values[3];
+        if (age >= 50) return values[2];
+        if (age >= 40) return values[1];
+        if (age >= 30) return values[0];
+        return 0;
+    }
+
+    // Function to calculate PTP for females based on age
+    function getFemalePTP(age, values) {
+        if (age >= 70) return values[4];
+        if (age >= 60) return values[3];
+        if (age >= 50) return values[2];
+        if (age >= 40) return values[1];
+        if (age >= 30) return values[0];
+        return 0;
+    }
+
+    // Function to determine clinical likelihood based on PTP
+    function getClinicalLikelihood(ptp) {
+        if (ptp <= 5) return "Mycket låg";
+        if (ptp <= 14) return "Låg";
+        if (ptp <= 85) return "Måttlig";
+        return "Hög";
+    }
+    
+        // Function to determine clinical likelihood based on modified PTP
+    function getClinicalLikelihoodNew(newVal) {
+        if (newVal <= 5) return "Mycket låg";
+        if (newVal <= 14) return "Låg";
+        if (newVal <= 85) return "Måttlig";
+        return "Hög";
+    }
+    			//change color of bar depending on value
+    	var colorRange = document.querySelector('.color-range')
+		var colorChoice = document.getElementById("resultslider")
+
+		colorRange.addEventListener('input', function(e) {
+  			var hue = ((this.value/100)*360).toFixed(0)
+  			var hsl = "hsl("+ hue + ", 70%, 95%)"
+  			colorRange.style.color = hsl
+  			colorChoice.style.color = hsl
+  			document.body.style.background = hsl
+});
+		colorRange.value = ptp;
+		var event = new Event('input');
+		colorRange.dispatchEvent(event);
+
+
+</script>
+
+</body>
+</html>
