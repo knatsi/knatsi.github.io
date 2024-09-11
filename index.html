@@ -336,16 +336,15 @@
         // Display Result
         var likelihood = getClinicalLikelihood(ptp);
         document.getElementById('result').innerHTML = `Pretest-sannolikhet (PTP): ${ptp}%<br><br>Klinisk sannolikhet: ${likelihood}<br>`;
-		  document.getElementById('resultslider').value = ptp
+	document.getElementById('resultslider').value = ptp;
+	output.innerHTML = ""    
     	}
 
 	//On Change Sliding bar
 	var output = document.getElementById('output');      
       	function changeValue(newVal) {
 	 var likelihoodNew = getClinicalLikelihoodNew(newVal)         
-         if (output != ptp) {
 		output.innerHTML = `<br>Modifierad pretest-sannolikhet: ${newVal}%. Den nya kliniska sannolikheten är: ${likelihoodNew}`;
-     		}
 	}
 	
     // Function to calculate PTP for males based on age
