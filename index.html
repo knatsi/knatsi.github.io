@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Pretest-kalkylator för kroniskt koronart syndrom</title>
     <style>
-        body {
+ 	body {
             font-family: Arial, sans-serif;
             max-width: 700px;
             margin: 0 auto;
@@ -62,24 +62,18 @@
             background-color: #e6f7ff;
             text-align: center;
         }
-	.mainbox {
-    		display: grid; 
-    		grid-template-columns: 2fr 1fr; 
-    		grid-gap: 10px; 
-    		border: none; 
-    		width: 100%; 
-	}
         .adjustment-statement {
-	    display: inline-block;
             margin-top: 20px;
             padding: 10px;
             background-color: #fff4e6;
             border-left: 4px solid #ffa500;
             font-style: italic;
-	    display: flex;
-  	    align-items: center;
-            justify-content: center;
-            flex-direction:column;
+        }
+        .borders-statement {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff4e6;
+            border-left: 4px solid #ffa500;
         }
         .citation-box {
             margin-top: 40px;
@@ -96,139 +90,87 @@
 		position: relative;
 		z-index: 1;
 		appearance: none;
-		border-radius: 2em;
-		background-color: rgba(0,0,0,0.1);
-		height: 1em;
-		width: 80%;
+		border-radius: 3px;
+		background-color: black;
+		height: 10px;
+		width: 90%;
 		display: block;
 		outline: none;
 		margin: 1rem auto;
 		transition: color 0.05s linear;
 		background: linear-gradient(to right, #388e3c 0% 5%, #9ccc65 5% 15%, #ffeb3b 15% 50%, #ffa726 50% 85%, #d84315 85% 100%);
-		&:focus{
-			outline: none;
-		}
-		&:active,
-		&:hover:active{
-			cursor: grabbing;
-			cursor: -webkit-grabbing;
-		}
-		&::-moz-range-track{
-			appearance: none;
-			opacity: 0;
-			outline: none !important;
-		}
-		&::-ms-track{
-			outline: none !important;
-			appearance: none;
-			opacity: 0;
-		}
+  &:focus{
+    outline: none;
+  }
+  &:active,
+  &:hover:active{
+    cursor: grabbing;
+    cursor: -webkit-grabbing;
+  }
+  &::-moz-range-track{
+    appearance: none;
+    opacity: 0;
+    outline: none !important;
+  }
+  &::-ms-track{
+    outline: none !important;
+    appearance: none;
+    opacity: 0;
+  }
 
-		&::-webkit-slider-thumb{
-			height: 3em;
-			width: 3em;
-			border-radius: 2em;
-			appearance: none;
-			background: white;
-			cursor: pointer;
-			cursor: move;
-			cursor: grab;
-			cursor: -webkit-grab;
-			border: 0.4em solid currentColor;
-			transition: border 0.1s ease-in-out,box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
-			box-shadow: 0 0.4em 1em rgba(0,0,0,0.15);
-		&:active,
-		&:hover:active{
-			cursor: grabbing;
-			cursor: -webkit-grabbing;
-			transform: scale(0.975);
-			box-shadow: 0 0 1px rgba(0,0,0,0.1);
-			border: 1.5em solid currentColor;
-		}
-		&:hover{
-			transform: scale(1.1);
-			box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-		}
-		&::-moz-range-thumb{
-			height: 3em;
-			width: 3em;
-			border-radius: 2em;
-			appearance: none;
-			background: white;
-			border: 0.4em solid currentColor;
-			cursor: pointer;
-			cursor: move;
-			cursor: grab;
-			cursor: -webkit-grab;
-			transition: box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
-			box-shadow: 0 1px 11px rgba(0,0,0,0);
-		&:active,
-		&:hover:active{
-			cursor: grabbing;
-			cursor: -webkit-grabbing;
-			transform: scale(0.975);
-			box-shadow: 0 0 1px rgba(0,0,0,0.1);
-		}
-		&:hover{
-			transform: scale(1.1);
-			box-shadow: 0 5px 15px rgba(0,0,0,0.15);
-		}
-  		}
-	.tooltip {
-	  position: relative; }
-	  .tooltip:after, .tooltip:before {
-	    opacity: 0;
-	    pointer-events: none;
-	    bottom: 100%;
-	    left: 50%;
-	    position: absolute;
-	    z-index: 10;
-	    transform: translate(-50%, 10px);
-	    transform-origin: top;
-	    transition: all 0.18s ease-out 0.18s; }
-	.tooltip:after {
-	  background-color: #f5f5f5;
-	  box-shadow: 0 0 3px #ddd;
-	  content: attr(data-tooltip);
-	  padding: 10px;
-	  white-space: nowrap;
-	  margin-bottom: 11px; }
-	.tooltip:before {
-	  width: 0;
-	  height: 0;
-	  content: "";
-	  margin-bottom: 6px; }
-	.tooltip:hover:before,
-	.tooltip:hover:after {
-	  opacity: 1;
-	  pointer-events: auto;
-	  transform: translate(-50%, 0); }
-	[data-tooltip-pos="right"]:before {
-	  border-top: 6px solid transparent;
-	  border-right: 6px solid #f5f5f5;
-	  border-bottom: 6px solid transparent;
-	  margin-left: 6px; }
-	[data-tooltip-pos="right"]:before,
-	[data-tooltip-pos="right"]:after {
-	  bottom: auto;
-	  left: 100%;
-	  top: 50%;
-	  transform: translate(-10px, -50%); }
-	[data-tooltip-pos="right"]:after {
-	  margin-left: 11px; }
-	[data-tooltip-pos="right"]:hover:before,
-	[data-tooltip-pos="right"]:hover:after {
-	  transform: translate(0, -50%); }
-	[data-tooltip-length]:after {
-	  white-space: normal; }
-	[data-tooltip-length="small"]:after {
-	  width: 80px; }
-	[data-tooltip-length="medium"]:after {
-	  width: 150px; }
-	[data-tooltip-length="large"]:after {
-	  width: 260px; }
-	[data-tooltip-length="fit"]:after {
-	  width: 100%; }
+  &::-webkit-slider-thumb{
+    height: 20px;
+    width: 10px;
+    border-radius: 5px;
+    appearance: none;
+    background: white;
+    cursor: pointer;
+    cursor: move;
+    cursor: grab;
+    cursor: -webkit-grab;
+    border: 3px solid currentColor;
+    transition: border 0.1s ease-in-out,box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
+    box-shadow: 0 0.4em 1em rgba(0,0,0,0.15);
+    &:active,
+    &:hover:active{
+      cursor: grabbing;
+      cursor: -webkit-grabbing;
+      transform: scale(0.975);
+      box-shadow: 0 0 1px rgba(0,0,0,0.1);
+      border: 4px solid currentColor;
+    }
+    &:hover{
+      transform: scale(1.1);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+  }
+  &::-moz-range-thumb{
+    height: 3em;
+    width: 3em;
+    border-radius: 2em;
+    appearance: none;
+    background: white;
+    border: 0.4em solid currentColor;
+    cursor: pointer;
+    cursor: move;
+    cursor: grab;
+    cursor: -webkit-grab;
+    transition: box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out;
+    box-shadow: 0 1px 11px rgba(0,0,0,0);
+    &:active,
+    &:hover:active{
+      cursor: grabbing;
+      cursor: -webkit-grabbing;
+      transform: scale(0.975);
+      box-shadow: 0 0 1px rgba(0,0,0,0.1);
+    }
+    &:hover{
+      transform: scale(1.1);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+  }
+}
+
 
 </style>
 </head>
@@ -288,14 +230,22 @@
     <div id="result-container">			
         <div id="result"><br></div>
 	<div class="slidecontainer">
-  		<input type="range" min="0" max="100" value='ptp' class="color-range" id="resultslider" oninput = "changeValue(this.value)">
-  		<div id = "output"> </div>
+  		<input type="range" min="0" max="100" value='ptp' class="color-range" id="resultslider" oninput = "changeValue(this.value)" Title= "Överväg att justera sannolikheten baserat på; EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom, Kranskärlsförkalkningar på tidigare DT-Thorax">
+		  		<div id = "output"> </div>
 	</div>		
     </div>
 
-    <!-- Adjustment Statement -->
-<div class='mainbox'>
-    <div class="adjustment-statement purple">
+	 <!-- Borders Statement -->
+	    <div class="borders-statement">
+0-5% - Mycket låg sannolikhet -- Ingen utredning<br>
+5-15% - Låg sannolikhet -- Justera sannolikhet utifrån EKG, ekokardiografi och arbetsprov ELLER DT<br>
+15-50% - Måttlig sannolikhet -- DT eller SPECT/MR<br>
+50-85% - Måttlig sannolikhet -- SPECT/MR<br>
+>85% - Hög sannolikhet -- Koronarangio<br>
+    </div>
+	
+   <!-- Adjustment Statement -->
+    <div class="borders-statement">
         Överväg att justera den beräknade kliniska sannolikheten baserat på förekomst av: <br><br>
 	Q-,ST-, eller T-vågsförändringar på vilo-EKG<br>
 	Patologiska fynd vid arbetsprov<br>
@@ -304,20 +254,11 @@
 	Perifer artärsjukdom<br>
 	Sklerotiska kranskärlsförändringar på tidigare DT-thorax.<br>
     </div>
-    <div class="adjustment-statement green">
-	<div class="tooltip" data-tooltip="Ingen utredning" data-tooltip-pos="right" data-tooltip-length="medium">0-5% - Mycket låg sannolikhet<br></div>
-	<div class="tooltip" data-tooltip="Justera sannolikhet utifrån EKG, ekokardiografi och arbetsprov ELLER DT" data-tooltip-pos="right" data-tooltip-length="medium">5-15% - Låg sannolikhet<br></div>
-	<div class="tooltip" data-tooltip="DT eller SPECT/MR" data-tooltip-pos="right" data-tooltip-length="medium">15-50% - Måttlig sannolikhet<br></div>
-	<div class="tooltip" data-tooltip="SPECT/MR" data-tooltip-pos="right" data-tooltip-length="medium">50-85% - Måttlig sannolikhet<br></div>
-	<div class="tooltip" data-tooltip="Koronarangio" data-tooltip-pos="right" data-tooltip-length="medium">>85% - Hög sannolikhet<br></div>
-    </div>
-</div>
 
     <!-- Citation Box -->
     <div class="citation-box">
         Vrints et al. 2024 ESC Guidelines for the management of chronic coronary syndromes, Eur Heart J 2024. doi: 10.1093/eurheartj/ehae177
     </div>
-
 
 <script>
     function toggleSymptomOptions() {
@@ -441,22 +382,6 @@
         if (newVal <= 85) return "Måttlig";
         return "Hög";
     }
-    			//change color of bar depending on value
-    	var colorRange = document.querySelector('.color-range')
-		var colorChoice = document.getElementById("resultslider")
-
-		colorRange.addEventListener('input', function(e) {
-  			var hue = ((this.value/100)*360).toFixed(0)
-  			var hsl = "hsl("+ hue + ", 70%, 95%)"
-  			colorRange.style.color = hsl
-  			colorChoice.style.color = hsl
-  			document.body.style.background = hsl
-});
-		colorRange.value = ptp;
-		var event = new Event('input');
-		colorRange.dispatchEvent(event);
-
-
 </script>
 
 </body>
