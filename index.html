@@ -169,7 +169,63 @@
 			transform: scale(1.1);
 			box-shadow: 0 5px 15px rgba(0,0,0,0.15);
 		}
-  }
+  		}
+	.tooltip {
+	  position: relative; }
+	  .tooltip:after, .tooltip:before {
+	    opacity: 0;
+	    pointer-events: none;
+	    bottom: 100%;
+	    left: 50%;
+	    position: absolute;
+	    z-index: 10;
+	    transform: translate(-50%, 10px);
+	    transform-origin: top;
+	    transition: all 0.18s ease-out 0.18s; }
+	.tooltip:after {
+	  background-color: #f5f5f5;
+	  box-shadow: 0 0 3px #ddd;
+	  content: attr(data-tooltip);
+	  padding: 10px;
+	  white-space: nowrap;
+	  margin-bottom: 11px; }
+	.tooltip:before {
+	  width: 0;
+	  height: 0;
+	  content: "";
+	  margin-bottom: 6px; }
+	.tooltip:hover:before,
+	.tooltip:hover:after {
+	  opacity: 1;
+	  pointer-events: auto;
+	  transform: translate(-50%, 0); }
+	[data-tooltip-pos="right"]:before {
+	  border-top: 6px solid transparent;
+	  border-right: 6px solid #f5f5f5;
+	  border-bottom: 6px solid transparent;
+	  margin-left: 6px; }
+	[data-tooltip-pos="right"]:before,
+	[data-tooltip-pos="right"]:after {
+	  bottom: auto;
+	  left: 100%;
+	  top: 50%;
+	  transform: translate(-10px, -50%); }
+	[data-tooltip-pos="right"]:after {
+	  margin-left: 11px; }
+	[data-tooltip-pos="right"]:hover:before,
+	[data-tooltip-pos="right"]:hover:after {
+	  transform: translate(0, -50%); }
+	[data-tooltip-length]:after {
+	  white-space: normal; }
+	[data-tooltip-length="small"]:after {
+	  width: 80px; }
+	[data-tooltip-length="medium"]:after {
+	  width: 150px; }
+	[data-tooltip-length="large"]:after {
+	  width: 260px; }
+	[data-tooltip-length="fit"]:after {
+	  width: 100%; }
+
 </style>
 </head>
 <body>
@@ -214,8 +270,8 @@
     <!-- Risk Factors -->
     <div class="form-group">
         <label>Riskfaktorer:</label>
-        <input type="checkbox" id="risk1"> Ärftlighet (1 poäng)<br>
-        <input type="checkbox" id="risk2"> Rökning (1 poäng)<br>
+        <input type="checkbox" id="risk1"> Ärftlighet (1 poäng) (Unga förstagradssläktingar med koronarkärlssjukdom, män <55 år, kvinnor <65 år)<br>
+        <input type="checkbox" id="risk2"> Rökning (1 poäng) (nuvarande eller tidigare)<br>
         <input type="checkbox" id="risk3"> Dyslipidemi (1 poäng)<br>
         <input type="checkbox" id="risk4"> Hypertension (1 poäng)<br>
         <input type="checkbox" id="risk5"> Diabetes (1 poäng)<br>
@@ -245,11 +301,11 @@
 	Sklerotiska kranskärlsförändringar på tidigare DT-thorax.<br>
     </div>
     <div class="adjustment-statement green">
-	Mycket låg (0-5) --> ingen utredning<br>
-	Låg (5-15) --> justera klinisk sannolikhet utifrån EKG, ekokardiografi och arbetsprov ELLER DT<br>
-	Måttlig (15 - 50) --> DT eller SPECT/MR<br>
-	50-85 --> SPECT/MR<br>
-	>85 --> angio <br>
+	<div class="tooltip" data-tooltip="Ingen utredning" data-tooltip-pos="right" data-tooltip-length="medium">0-5% - Mycket låg sannolikhet<br>
+	<div class="tooltip" data-tooltip="Justera sannolikhet utifrån EKG, ekokardiografi och arbetsprov ELLER DT" data-tooltip-pos="right" data-tooltip-length="medium">5-15% - Låg sannolikhet<br>
+	<div class="tooltip" data-tooltip="DT eller SPECT/MR" data-tooltip-pos="right" data-tooltip-length="medium">15-50% - Måttlig sannolikhet<br>
+	<div class="tooltip" data-tooltip="SPECT/MR" data-tooltip-pos="right" data-tooltip-length="medium">50-85% - Måttlig sannolikhet<br>
+	<div class="tooltip" data-tooltip="Koronarangio" data-tooltip-pos="right" data-tooltip-length="medium">>85% - Hög sannolikhet<br>
     </div>
 </div>
 
