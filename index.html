@@ -307,20 +307,20 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
         var age = parseInt(document.getElementById('age').value);
         var isMale = document.getElementById('male').checked;
         var isFemale = document.getElementById('female').checked;
-		  var cbPain = document.getElementById('symptom-chest-pain').checked;
-		  var cbDyspnea = document.getElementById('symptom-dyspnea').checked;
+	var cbPain = document.getElementById('symptom-chest-pain').checked;
+	var cbDyspnea = document.getElementById('symptom-dyspnea').checked;
 			
-			if (cbPain) {
-        		document.getElementById('dyspnea').checked = false;
-        		}
-        	if (cbDyspnea) {
-        		document.getElementById('pain1').checked = false;
-        		document.getElementById('pain2').checked = false;
-        		document.getElementById('pain3').checked = false;
-        	}
+	if (cbPain) {
+        	document.getElementById('dyspnea').checked = false;
+        }
+        if (cbDyspnea) {
+        	document.getElementById('pain1').checked = false;
+        	document.getElementById('pain2').checked = false;
+        	document.getElementById('pain3').checked = false;
+        }
         	
         var dyspnea = document.getElementById('dyspnea').checked ? 2 : 0;
-		  var pain1 = document.getElementById('pain1').checked ? 1 : 0;
+	var pain1 = document.getElementById('pain1').checked ? 1 : 0;
         var pain2 = document.getElementById('pain2').checked ? 1 : 0;
         var pain3 = document.getElementById('pain3').checked ? 1 : 0;
         var risk1 = document.getElementById('risk1').checked ? 1 : 0;
@@ -341,6 +341,10 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
                 if (riskFactorScore <= 1) ptp = getMalePTP(age, [1, 2, 4, 8, 15]);
                 else if (riskFactorScore <= 3) ptp = getMalePTP(age, [2, 4, 7, 12, 17]);
                 else ptp = getMalePTP(age, [5, 8, 12, 17, 24]);
+	    } else if (symptomScore < 1 && cbPain) {
+                if (riskFactorScore <= 1) ptp = getMalePTP(age, [1, 2, 4, 8, 15]);
+                else if (riskFactorScore <= 3) ptp = getMalePTP(age, [2, 4, 7, 12, 17]);
+                else ptp = getMalePTP(age, [5, 8, 12, 17, 24]);
             } else if (symptomScore === 2) {
                 if (riskFactorScore <= 1) ptp = getMalePTP(age, [2, 3, 6, 12, 20]);
                 else if (riskFactorScore <= 3) ptp = getMalePTP(age, [4, 6, 11, 17, 27]);
@@ -355,6 +359,10 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
                 if (riskFactorScore <= 1) ptp = getFemalePTP(age, [0, 1, 1, 2, 4]);
                 else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [1, 1, 2, 4, 7]);
                 else ptp = getFemalePTP(age, [2, 3, 5, 7, 11]);
+	    } else if (symptomScore < 1 && cbPain) {
+                if (riskFactorScore <= 1) ptp = getFemalePTP(age, [0, 1, 1, 2, 4]);
+                else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [1, 1, 2, 4, 7]);
+                else ptp = getFemalePTP(age, [2, 3, 5, 7, 11]);		    
             } else if (symptomScore === 2) {
                 if (riskFactorScore <= 1) ptp = getFemalePTP(age, [0, 1, 2, 3, 6]);
                 else if (riskFactorScore <= 3) ptp = getFemalePTP(age, [1, 2,	 3, 6, 10]);
