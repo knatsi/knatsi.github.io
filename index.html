@@ -70,12 +70,13 @@
             background-color: #fff4e6;
             border-left: 4px solid #ffa500;
             font-style: italic;
+	    font-size: 80%;
         }
         .borders-statement {
             margin-top: 20px;
             padding: 10px;
-            background-color: #fff4e6;
-            border-left: 4px solid #ffa500;
+            background-color: #e6f7ff;
+            border-left: 4px solid #007BFF;
         }
 	table {
             margin-left: auto;
@@ -155,12 +156,12 @@
     }
   }
   &::-moz-range-thumb{
-    height: 3em;
-    width: 3em;
-    border-radius: 2em;
+    height: 20px;
+    width: 10px;
+    border-radius: 5px;
     appearance: none;
     background: white;
-    border: 0.4em solid currentColor;
+    border: 3px solid currentColor;
     cursor: pointer;
     cursor: move;
     cursor: grab;
@@ -173,6 +174,7 @@
       cursor: -webkit-grabbing;
       transform: scale(0.975);
       box-shadow: 0 0 1px rgba(0,0,0,0.1);
+      border: 4px solid currentColor;
     }
     &:hover{
       transform: scale(1.1);
@@ -278,19 +280,19 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
     	</div>
 	
    <!-- Adjustment Statement -->
-    <div class="borders-statement">
+    <div class="adjustment-statement">
         Faktorer som kan användas för att justera sannolikheten: <br><br>
-	Q-,ST-, eller T-vågsförändringar på vilo-EKG<br>
-	Patologiska fynd vid arbetsprov<br>
+	Vilo-EKG - Q-,ST-, eller T-vågsförändringar<br>
+	Arbetsprov - Vid PTP 5-15% kan normalt arbetsprov förskjuta sannolikheten till <5%<br>
 	Vänsterkammardysfunktion<br>
 	Ventrikulära arytmier<br>
 	Perifer artärsjukdom<br>
-	Sklerotiska kranskärlsförändringar på tidigare DT-thorax.<br>
+	Förkalkningar på kranskärlen på tidigare DT-thorax<br>
     </div>
 
     <!-- Citation Box -->
     <div class="citation-box">
-        Vrints et al. 2024 ESC Guidelines for the management of chronic coronary syndromes, Eur Heart J 2024. doi: 10.1093/eurheartj/ehae177
+        Vrints et al. 2024 ESC Guidelines for the management of chronic coronary syndromes, Eur Heart J 2024. doi: 10.1093/eurheartj/ehae177<br>
     </div>
 
 <script>
