@@ -228,7 +228,7 @@
     <!-- Risk Factors -->
     <div class="form-group">
         <label>Riskfaktorer (1 poäng vardera): </label>
-        <input type="checkbox" id="risk1"> Ärftlighet (Förstagradsläkting med kranskärlssjukdom <55 år (män) eller <65 år (kvinnor))<br>
+        <input type="checkbox" id="risk1"> Ärftlighet (Förstagradsläkting med kranskärlssjukdom <55 år (män) eller <65 år (kvinnor)<br>
         <input type="checkbox" id="risk2"> Rökning (Nuvarande eller tidigare)<br>
         <input type="checkbox" id="risk3"> Dyslipidemi<br>
         <input type="checkbox" id="risk4"> Hypertoni<br>
@@ -251,27 +251,27 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
 	 <!-- Borders Statement -->
 	    <div class="borders-statement">
 		<table style="width:100%">
- 		<tr>
+ 		<tr id="tbRow1">
     			<td width="70px">0-5%</td>
     			<td width="170px">Mycket låg sannolikhet</td> 
     			<td>Ingen utredning</td>
   		</tr>
- 		<tr>
+ 		<tr id="tbRow2">
     			<td>5-15%</td>
     			<td>Låg sannolikhet</td> 
     			<td>Arbetsprov eller DT-kranskärl</td>
   		</tr>	
- 		<tr>
+ 		<tr id="tbRow3"> 
     			<td>15-50%</td>
     			<td>Måttlig sannolikhet</td> 
     			<td>DT-kranskärl eller Myokardskintigrafi/MR-hjärta</td>
   		</tr>
- 		<tr>
+ 		<tr id="tbRow4">
     			<td>50-85%</td>
     			<td>Måttlig sannolikhet</td> 
     			<td>Myokardskintigrafi/MR-hjärta</td>
   		</tr>
- 		<tr>
+ 		<tr id="tbRow5">
     			<td>>85%</td>
     			<td>Hög sannolikhet</td> 
     			<td>Koronarangiografi</td>
@@ -312,7 +312,14 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
         var isFemale = document.getElementById('female').checked;
 	var cbPain = document.getElementById('symptom-chest-pain').checked;
 	var cbDyspnea = document.getElementById('symptom-dyspnea').checked;
-			
+       //Clear results
+        document.getElementById('tbRow1').style.fontWeight="normal";
+        document.getElementById('tbRow2').style.fontWeight="normal";
+        document.getElementById('tbRow3').style.fontWeight="normal";
+        document.getElementById('tbRow4').style.fontWeight="normal";
+        document.getElementById('tbRow5').style.fontWeight="normal";
+      
+      //Calculate
 	if (cbPain) {
         	document.getElementById('dyspnea').checked = false;
         }
@@ -379,16 +386,31 @@ EKG-förändringar, Arbetsprov, Vänsterkammardysfunktion, Perifer artärsjukdom
 
         // Display Result
         var likelihood = getClinicalLikelihood(ptp);
-        document.getElementById('result').innerHTML = `Pretest-sannolikhet (PTP): ${ptp}%<br><br>Klinisk sannolikhet: ${likelihood}<br>`;
+        document.getElementById('result').innerHTML = `Pretest-sannolikhet (PTP): <b>${ptp}%</b>. Klinisk sannolikhet: <b>${likelihood}</b><br>`;
 	document.getElementById('resultslider').value = ptp;
-	output.innerHTML = ""    
+	output.innerHTML = ""
+  if (ptp <= 5) document.getElementById('tbRow1').style.fontWeight="bold";
+  if (ptp <= 14 && ptp > 5) document.getElementById('tbRow2').style.fontWeight="bold";
+  if (ptp <= 49 && ptp > 14) document.getElementById('tbRow3').style.fontWeight="bold";
+  if (ptp <= 84 && ptp > 49) document.getElementById('tbRow4').style.fontWeight="bold";
+  if (ptp > 84) document.getElementById('tbRow5').style.fontWeight="bold";
     	}
 
 	//On Change Sliding bar
 	var output = document.getElementById('output');      
       	function changeValue(newVal) {
+        document.getElementById('tbRow1').style.fontWeight="normal";
+        document.getElementById('tbRow2').style.fontWeight="normal";
+        document.getElementById('tbRow3').style.fontWeight="normal";
+        document.getElementById('tbRow4').style.fontWeight="normal";
+        document.getElementById('tbRow5').style.fontWeight="normal";
 	 var likelihoodNew = getClinicalLikelihoodNew(newVal)         
-		output.innerHTML = `<br>Modifierad pretest-sannolikhet: ${newVal}%. Den nya kliniska sannolikheten är: ${likelihoodNew}`;
+		output.innerHTML = `Modifierad pretest-sannolikhet: ${newVal}%.`;
+   if (newVal <= 5) document.getElementById('tbRow1').style.fontWeight="bold";
+  if (newVal <= 14 && newVal > 5) document.getElementById('tbRow2').style.fontWeight="bold";
+  if (newVal <= 49 && newVal > 14) document.getElementById('tbRow3').style.fontWeight="bold";
+  if (newVal <= 84 && newVal > 49) document.getElementById('tbRow4').style.fontWeight="bold";
+  if (newVal > 84) document.getElementById('tbRow5').style.fontWeight="bold";
 	}
 	
     // Function to calculate PTP for males based on age
