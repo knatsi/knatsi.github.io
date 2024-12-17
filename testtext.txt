@@ -1,0 +1,117 @@
+﻿
+
+Cardiac report: Complete
+
+GE Healthcare Hospital  Ultrasound Laboratory
+
+----------
+
+Name Tolvan, Tolvansson
+Birthdate 12/12/1912
+Patient Id 1912121212
+Gender Female
+Height 167.0 cm
+Weight 66.0 kg
+BSA 1.74 m²
+BP 
+
+Date 09/12/2024
+Tape 
+Sonographer ME
+Ref. Doc. Yasin, Lina
+Physician 
+
+----------
+
+2D 
+
+IVSd	1.2	cm
+LVIDd	4.0	cm
+EDV(Teich)	70	ml
+LVPWd	1.1	cm
+LVOT Diam	2.2	cm
+Ao asc	2.9	cm
+RA Area	14.5	cm²
+LALs A4C	6.1	cm
+LAAs A4C	26.5	cm²
+LAESV A-L A4C	97	ml
+LAESV MOD A4C	86	ml
+LALs A2C	6.5	cm
+LAAs A2C	26.7	cm²
+LAESV A-L A2C	93	ml
+LAESV MOD A2C	84	ml
+LAESV(A-L)	98	ml
+LAESV Index (A-L)	56.35	ml/m²
+LAESV(MOD BP)	88	ml
+LAESVInd MOD BP	50.34	ml/m²
+ePAWP	17.33	mmHg
+
+M-Mode 
+
+Doppler 
+
+MV E Vel	1.24	m/s
+MV DecT	347	ms
+MV Dec Slope	3.6	m/s²
+MV A Vel	1.62	m/s
+MV E/A Ratio	0.77
+E' Sept	0.04	m/s
+E/E' Sept	35.45
+E' Lat	0.04	m/s
+E/E' Lat	34.92
+E' Avg	0.04	m/s
+E/E' Avg	35.18
+MV Vmax	1.72	m/s
+MV Vmean	0.96	m/s
+MV maxPG	11.90	mmHg
+MV meanPG	4.16	mmHg
+MV VTI	48.0	cm
+HR	66	BPM
+MVA (VTI)	2.6	cm²
+LVOT Vmax	1.43	m/s
+LVOT Vmean	1.07	m/s
+LVOT maxPG	8.19	mmHg
+LVOT meanPG	4.96	mmHg
+LVOT Env.Ti	322	ms
+LVOT VTI	34.3	cm
+HR	67	BPM
+LVSV Dopp	125	ml
+LVSI Dopp	71.98	ml/m²
+LVCO Dopp	8.33	l/min
+LVCI Dopp	4.79	l/minm²
+AV Vmax	4.13	m/s
+AV Vmean	2.99	m/s
+AV maxPG	68.19	mmHg
+AV meanPG	40.08	mmHg
+AV Env.Ti	304	ms
+AV VTI	91.1	cm
+HR	74	BPM
+AVA Vmax	1.3	cm²
+AVA (VTI)	1.4	cm²
+AVAI (VTI)	0.790	cm²/m²
+AVAI Vmax	0.727	cm²/m²
+P Vein S	0.59	m/s
+P Vein D	0.34	m/s
+P Vein S/D Ratio	1.73
+TR Vmax	2.67	m/s
+TR maxPG	28.41	mmHg
+
+----------
+
+Referral Diagnosis 
+
+Clinical Diagnosis 
+
+Findings 
+
+Conclusions 
+
+Echo Summary 
+
+----------
+
+Date 
+
+
+
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    (physician)
