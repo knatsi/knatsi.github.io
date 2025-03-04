@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modern CSV List Viewer</title>
+  <title>Verktygslista</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Satoshi:wght@300;400;700&display=swap');
+    
     body {
-      font-family: 'Arial', sans-serif;
-      background-color: #f4f7f6;
+      font-family: 'Satoshi', sans-serif;
+      background-color: #F9dbc2;
       color: #333;
       margin: 0;
       padding: 20px;
@@ -18,7 +20,7 @@
     }
 
     .container {
-      background: white;
+      background: #d2b0a2;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -28,8 +30,8 @@
     }
 
     h1 {
-      text-align: center;
-      color: #5c6bc0;
+      text-align: Left;
+      color: #3312e;
       font-size: 2rem;
     }
 
@@ -47,27 +49,30 @@
     }
 
     th {
-      background-color: #5c6bc0;
-      color: white;
+      background-color: #9f9a7f;
+      color: #3312e;
       font-size: 1.1rem;
       cursor: pointer;
     }
 
     th:hover {
-      background-color: #3f51b5;
+      background-color: #9f9a7f;
     }
 
     tr:nth-child(even) {
-      background-color: #f9f9f9;
+      background-color: #dbd4ad;
+    }
+    tr:nth-child(odd) {
+      background-color: #d1caa5;
     }
 
     tr:hover {
-      background-color: #e3f2fd;
+      background-color: #cfcbba;
       cursor: pointer;
     }
 
     tr.selected {
-      background-color: #a5d6a7 !important;
+      background-color: #cfcbba !important;
     }
 
     .loading {
@@ -82,20 +87,20 @@
       padding: 12px 20px;
       font-size: 1rem;
       color: white;
-      background-color: #5c6bc0;
+      background-color: #9f9a7f;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
 
     .request-button:hover {
-      background-color: #3f51b5;
+      background-color: #cfcbba;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>List of Items from CSV</h1>
+    <h1>Daniels verktygslista</h1>
     <table id="csvTable">
       <thead>
         <tr id="headerRow"></tr>
@@ -108,8 +113,8 @@
 
   <script>
     let selectedRow = null;
-    const encodedEmail = "ZGFuaWVsX2pvaG5fbWFubmFAaG90bWFpbC5jb20="; // Base64 encoded email
-    const encodedUrl = "aHR0cHM6Ly9rbmF0c2kuZ2l0aHViLmlvL2RhdGFiYXNlX3Rvb2xzLmNzdg=="; // Base64 encoded URL
+    const encodedEmail = "a25hdHNpODYrZ21haWwuY29t"; // Base64 encoded email
+    const encodedUrl = "aHR0cHM6Ly9rbmF0c2kuZ2l0aHViLmlvL3Rlc3R0ZXh0LmNzdg=="; // Base64 encoded URL
 
     async function loadCSV() {
       const url = atob(encodedUrl); // Decode URL
@@ -170,7 +175,7 @@
         return;
       }
       const itemName = selectedRow.cells[0].textContent;
-      const email = atob(encodedEmail); // Decode email
+      const email = atob(encodedEmail).replace('+', '@'); // Decode email
       window.location.href = `mailto:${email}?subject=Låna ${encodeURIComponent(itemName)}`;
     }
 
