@@ -1,1 +1,194 @@
-test
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern CSV List Viewer</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f7f6;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 1000px;
+      overflow-x: auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #5c6bc0;
+      font-size: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 14px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #5c6bc0;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    th:hover {
+      background-color: #3f51b5;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:hover {
+      background-color: #e3f2fd;
+      cursor: pointer;
+    }
+
+    tr.selected {
+      background-color: #a5d6a7 !important;
+    }
+
+    .loading {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #ff7043;
+      font-weight: bold;
+    }
+
+    .request-button {
+      margin-top: 20px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      color: white;
+      background-color: #5c6bc0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .request-button:hover {
+      background-color: #3f51b5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>List of Items from CSV</h1>
+    <table id="csvTable">
+      <thead>
+        <tr id="headerRow"></tr>
+      </thead>
+      <tbody id="itemList"></tbody>
+    </table>
+    <p class="loading" id="loadingMessage">Loading data...</p>
+    <button class="request-button" onclick="requestItem()">Request Item</button>
+  </div>
+
+  <script>
+    let selectedRow = null;
+    const encodedEmail = "ZGFuaWVsX2pvaG5fbWFubmFAaG90bWFpbC5jb20="; // Base64 encoded email
+    const encodedUrl = "aHR0cHM6Ly9rbmF0c2kuZ2l0aHViLmlvL2RhdGFiYXNlX3Rvb2xzLmNzdg=="; // Base64 encoded URL
+
+    async function loadCSV() {
+      const url = atob(encodedUrl); // Decode URL
+      try {
+        const response = await fetch(url);
+        const csvText = await response.text();
+        const rows = csvText.split('\n').map(row => row.split(';'));
+        const headers = rows[0];
+        const data = rows.slice(1);
+
+        const headerRow = document.getElementById('headerRow');
+        const itemListElement = document.getElementById('itemList');
+        itemListElement.innerHTML = '';
+        headerRow.innerHTML = '';
+
+        document.getElementById('loadingMessage').style.display = 'none';
+
+        headers.forEach(header => {
+          const th = document.createElement('th');
+          th.textContent = header;
+          th.addEventListener('click', () => sortTable(headers.indexOf(header)));
+          headerRow.appendChild(th);
+        });
+
+        data.forEach(row => {
+          const tr = document.createElement('tr');
+          row.forEach(cell => {
+            const td = document.createElement('td');
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+
+          tr.addEventListener('click', function() {
+            if (tr.classList.contains('selected')) {
+              tr.classList.remove('selected');
+              selectedRow = null;
+            } else {
+              if (selectedRow) {
+                selectedRow.classList.remove('selected');
+              }
+              selectedRow = tr;
+              selectedRow.classList.add('selected');
+            }
+          });
+
+          itemListElement.appendChild(tr);
+        });
+      } catch (error) {
+        console.error('Error loading CSV:', error);
+        document.getElementById('itemList').innerHTML = '<tr><td colspan="100%">Failed to load data.</td></tr>';
+        document.getElementById('loadingMessage').style.display = 'none';
+      }
+    }
+
+    function requestItem() {
+      if (!selectedRow) {
+        alert("Please select an item before requesting.");
+        return;
+      }
+      const itemName = selectedRow.cells[0].textContent;
+      const email = atob(encodedEmail); // Decode email
+      window.location.href = `mailto:${email}?subject=Låna ${encodeURIComponent(itemName)}`;
+    }
+
+    function sortTable(columnIndex) {
+      const table = document.getElementById('csvTable');
+      const rows = Array.from(table.rows).slice(1);
+      const sortedRows = rows.sort((a, b) => {
+        const aText = a.cells[columnIndex].textContent.trim();
+        const bText = b.cells[columnIndex].textContent.trim();
+        return aText.localeCompare(bText);
+      });
+
+      const tbody = document.getElementById('itemList');
+      tbody.innerHTML = '';
+      sortedRows.forEach(row => tbody.appendChild(row));
+    }
+
+    window.onload = loadCSV;
+  </script>
+</body>
+</html>
