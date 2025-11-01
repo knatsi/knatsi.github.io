@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECG Laddergram</title>
+  <style>
+    body { background-color: #0f172a; color: #e6eef8; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
+    h1 { font-size: 1.5rem; margin-bottom: 10px; }
+    textarea { width: 100%; height: 200px; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 8px; font-family: monospace; font-size: 0.85rem; }
+    input[type="file"] { color: #e2e8f0; }
+    button { background-color: #2563eb; border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+    button:hover { background-color: #1d4ed8; }
+    .controls { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    canvas { width: 100%; background-color: #0f172a; border-radius: 8px; display: block; }
+    label { font-size: 0.8rem; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>ECG Laddergram — XML (base64) → Laddergram</h1>
+  <p>Paste a base64-encoded XML (or upload .xml/.txt). The tool decodes and plots leads.</p>
+
+  <div class="section">
+    <textarea id="inputBase64"></textarea>
+    <div style="margin-top:6px;">
+      <input type="file" id="fileInput" accept=".xml,.txt">
+      <button id="loadSample">Load Sample</button>
+    </div>
+  </div>
+
+  <div class="section controls">
+    <label>Gain: <span id="gainVal">1.0</span>x</label>
+    <input type="range" id="gain" min="0.2" max="3" step="0.05" value="1">
+
+    <label>Speed: <span id="speedVal">25</span> mm/s</label>
+    <input type="range" id="speed" min="6" max="50" step="1" value="25">
+
+    <label><input type="checkbox" id="showGrid" checked> Show grid</label>
+    <button id="downloadPng">Download PNG</button>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="section" id="leadList"></div>
+
+  <script>
+    const textarea = document.getElementById('inputBase64');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const gainSlider = document.getElementById('gain');
+    const gainVal = document.getElementById('gainVal');
+    const speedSlider = document.getElementById('speed');
+    const speedVal = document.getElementById('speedVal');
+    const showGrid = document.getElementById('showGrid');
+    const leadList = document.getElementById('leadList');
+
+    let leads = [];
+
+    const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
+<ECG>
+  <Header><SampleRate>500</SampleRate></Header>
+  <Leads>
+    <Lead name="I"><WaveForm>0 10 25 40 55 60 55 40 25 10 0 -10 -25 -40 -55 -60 -55 -40 -25 -10 0</WaveForm></Lead>
+    <Lead name="II"><WaveForm>0 30 50 90 120 140 120 90 50 30 0 -30 -50 -90 -120 -140 -120 -90 -50 -30 0</WaveForm></Lead>
+  </Leads>
+</ECG>`;
+
+    const sampleBase64 = btoa(sampleXml);
+    document.getElementById('loadSample').onclick = () => {
+      textarea.value = sampleBase64;
+      parseAndDraw();
+    };
+
+    document.getElementById('fileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const txt = reader.result.trim();
+        textarea.value = /^[A-Za-z0-9+/=\n\r]+$/.test(txt) ? txt : btoa(txt);
+        parseAndDraw();
+      };
+      reader.readAsText(file);
+    });
+
+    gainSlider.oninput = () => { gainVal.textContent = gainSlider.value; draw(); };
+    speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
+    showGrid.onchange = draw;
+
+    document.getElementById('downloadPng').onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'ecg_laddergram.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    textarea.addEventListener('input', parseAndDraw);
+
+    function parseAndDraw() {
+      leads = parseBase64XmlToLeads(textarea.value);
+      draw();
+      leadList.innerHTML = leads.length ? `<ul>${leads.map(l=>`<li>${l.name} — ${l.samples.length} samples @ ${l.sampleRate} Hz</li>`).join('')}</ul>` : '<p>No leads found.</p>';
+    }
+
+    function decodeBase64(b64) {
+      try { return atob(b64.replace(/\s+/g, '')); } catch { return b64; }
+    }
+
+    function parseBase64XmlToLeads(b64) {
+      const xmlText = decodeBase64(b64);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'application/xml');
+      if (doc.querySelector('parsererror')) return [];
+      const leads = [];
+      doc.querySelectorAll('Lead').forEach(ln => {
+        const name = ln.getAttribute('name') || 'Lead';
+        const wf = ln.querySelector('WaveForm, Samples, Data');
+        if (wf && wf.textContent.trim()) {
+          leads.push({ name, samples: extractNumbersFromText(wf.textContent), sampleRate: 500 });
+        }
+      });
+      return leads;
+    }
+
+    function extractNumbersFromText(text) {
+      return text.trim().split(/[\s,;]+/).map(Number).filter(n => !isNaN(n));
+    }
+
+    function draw() {
+      const gain = parseFloat(gainSlider.value);
+      const speed = parseFloat(speedSlider.value);
+      const DPR = window.devicePixelRatio || 1;
+      const width = 1200;
+      const leadHeight = 120;
+      const height = Math.max(leadHeight * leads.length, 240);
+      canvas.width = width * DPR;
+      canvas.height = height * DPR;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+      if (showGrid.checked) drawGrid(ctx, width, height);
+
+      const leftPad = 60;
+      const usableW = width - leftPad - 20;
+      const pxPerSecond = (speed / 25) * (usableW / 10);
+
+      leads.forEach((lead, i) => {
+        const centerY = i * leadHeight + leadHeight / 2;
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '14px system-ui';
+        ctx.fillText(lead.name, 8, centerY + 6);
+        ctx.strokeStyle = '#22c1c3';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const sr = lead.sampleRate || 500;
+        const samples = lead.samples;
+        const samplesPerPixel = sr / pxPerSecond;
+        const peak = Math.max(...samples.map(Math.abs)) || 1;
+        const voltsToPx = (leadHeight * 0.35 * gain) / peak;
+        for (let px = 0; px < usableW; px++) {
+          const s = Math.floor(px * samplesPerPixel);
+          const y = centerY - (samples[s] || 0) * voltsToPx;
+          const x = leftPad + px;
+          if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
+    }
+
+    function drawGrid(ctx, width, height) {
+      ctx.save();
+      const step = 8;
+      ctx.strokeStyle = 'rgba(220,80,80,0.06)';
+      for (let x = 0; x <= width; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+      for (let y = 0; y <= height; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(220,80,80,0.12)';
+      for (let x = 0; x <= width; x += step*5) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+      for (let y = 0; y <= height; y += step*5) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      ctx.restore();
+    }
+
+    // Load default sample on first open
+    textarea.value = sampleBase64;
+    parseAndDraw();
+  </script>
+</body>
+</html>
