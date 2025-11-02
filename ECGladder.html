@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ECG Laddergram Viewer v3</title>
+  <title>ECG Laddergram Viewer v4</title>
   <style>
     body { background-color: #0f172a; color: #e6eef8; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
     h1 { font-size: 1.5rem; margin-bottom: 10px; }
@@ -38,7 +38,50 @@
 
   <div id="leadSelector" class="lead-list"></div>
   <canvas id="canvas"></canvas>
+  <!-- Laddergram Editor Section (hidden until toggled on) -->
+<div id="laddergramContainer" style="display:none; margin-top:30px;">
+  <h2 style="color:#e2e8f0; font-size:1.2rem;">Ladder Diagram Editor</h2>
+  <div class="toolbar" id="ladderToolbar">
+    <button id="drawLine" class="active">Draw Line</button>
+    <button id="adjust">Adjust</button>
+    <button id="drawDot">Draw Symbol</button>
+    <button id="eraser">Eraser</button>
 
+    <div class="color-picker">
+      <label>Symbol:</label>
+      <select id="symbolType">
+        <option value="dot">● Dot</option>
+        <option value="arrow">→ Arrow</option>
+        <option value="singleLine">⊥ Single Line</option>
+        <option value="doubleLine">⊥⊥ Double Line</option>
+      </select>
+    </div>
+
+    <div class="color-picker">
+      <label>Color:</label>
+      <input type="color" id="colorPicker" value="#000000">
+    </div>
+
+    <div class="color-picker">
+      <label>Line Width:</label>
+      <input type="number" id="lineWidth" min="1" max="10" value="2">
+    </div>
+
+    <button id="undo">Undo</button>
+    <button id="clear" class="clear">Clear All</button>
+  </div>
+
+  <div class="canvas-container" style="border:1px solid #444; background:white; overflow:auto;">
+    <canvas id="ladderCanvas" width="1200" height="300"></canvas>
+  </div>
+
+  <div class="info" style="margin-top:10px; padding:10px; background:#1e293b; color:#a3bffa; border-radius:6px;">
+    Click and drag to draw. The ladder shows three chambers: Atria (A), AV Node (AV), and Ventricles (V).
+  </div>
+</div>
+
+
+  
   <script>
   const fileInput = document.getElementById('fileInput');
   const canvas = document.getElementById('canvas');
@@ -289,6 +332,137 @@ function drawLaddergram(width, offsetY, usableW, leftPad) {
       for (let y = 0; y <= height; y += step*5) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
       ctx.restore();
     }
+    // --- Laddergram toggle ---
+const ladderContainer = document.getElementById('laddergramContainer');
+showLadder.onchange = () => {
+  draw();
+  ladderContainer.style.display = showLadder.checked ? 'block' : 'none';
+};
+
+// --- Laddergram editor logic ---
+const ladderCanvas = document.getElementById('ladderCanvas');
+const lctx = ladderCanvas.getContext('2d');
+
+let ladderLines = [];
+let ladderSymbols = [];
+let isDrawing = false;
+let currentTool = 'line';
+let currentColor = '#000000';
+let currentLineWidth = 2;
+let currentSymbol = 'dot';
+let startX, startY;
+let history = [];
+
+const atriaH = ladderCanvas.height * 0.25;
+const avH = ladderCanvas.height * 0.5;
+const ventLine = atriaH + avH;
+
+// --- draw the base grid ---
+function drawLadderGrid() {
+  lctx.fillStyle = '#ffffff';
+  lctx.fillRect(0, 0, ladderCanvas.width, ladderCanvas.height);
+
+  lctx.strokeStyle = '#000';
+  lctx.lineWidth = 2;
+  lctx.beginPath();
+  lctx.moveTo(0, atriaH);
+  lctx.lineTo(ladderCanvas.width, atriaH);
+  lctx.stroke();
+  lctx.beginPath();
+  lctx.moveTo(0, ventLine);
+  lctx.lineTo(ladderCanvas.width, ventLine);
+  lctx.stroke();
+
+  lctx.strokeStyle = '#ddd';
+  lctx.lineWidth = 1;
+  for (let x = 40; x < ladderCanvas.width; x += 40) {
+    lctx.beginPath();
+    lctx.moveTo(x, 0);
+    lctx.lineTo(x, ladderCanvas.height);
+    lctx.stroke();
+  }
+
+  lctx.fillStyle = '#333';
+  lctx.font = 'bold 16px system-ui';
+  lctx.textBaseline = 'middle';
+  lctx.fillText('A (Atria)', 10, atriaH / 2);
+  lctx.fillText('AV (AV Node)', 10, atriaH + avH / 2);
+  lctx.fillText('V (Ventricles)', 10, ventLine + (ladderCanvas.height - ventLine) / 2);
+}
+drawLadderGrid();
+
+// --- restore from history ---
+function saveState() {
+  history.push(ladderCanvas.toDataURL());
+  if (history.length > 20) history.shift();
+}
+function undo() {
+  if (history.length > 1) {
+    history.pop();
+    const img = new Image();
+    img.onload = () => {
+      lctx.clearRect(0, 0, ladderCanvas.width, ladderCanvas.height);
+      lctx.drawImage(img, 0, 0);
+    };
+    img.src = history[history.length - 1];
+  }
+}
+
+// --- basic draw handling ---
+ladderCanvas.addEventListener('mousedown', e => {
+  const rect = ladderCanvas.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+  isDrawing = true;
+});
+
+ladderCanvas.addEventListener('mousemove', e => {
+  if (!isDrawing || currentTool !== 'line') return;
+  const rect = ladderCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  drawLadderGrid();
+  ladderLines.forEach(l => {
+    lctx.strokeStyle = l.color;
+    lctx.lineWidth = l.width;
+    lctx.beginPath();
+    lctx.moveTo(l.x1, l.y1);
+    lctx.lineTo(l.x2, l.y2);
+    lctx.stroke();
+  });
+  lctx.strokeStyle = currentColor;
+  lctx.lineWidth = currentLineWidth;
+  lctx.beginPath();
+  lctx.moveTo(startX, startY);
+  lctx.lineTo(x, y);
+  lctx.stroke();
+});
+
+ladderCanvas.addEventListener('mouseup', e => {
+  if (isDrawing && currentTool === 'line') {
+    const rect = ladderCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    ladderLines.push({ x1: startX, y1: startY, x2: x, y2: y, color: currentColor, width: currentLineWidth });
+    saveState();
+  }
+  isDrawing = false;
+});
+
+document.getElementById('drawLine').onclick = () => currentTool = 'line';
+document.getElementById('drawDot').onclick = () => currentTool = 'dot';
+document.getElementById('adjust').onclick = () => currentTool = 'adjust';
+document.getElementById('eraser').onclick = () => currentTool = 'eraser';
+document.getElementById('undo').onclick = undo;
+document.getElementById('clear').onclick = () => {
+  ladderLines = [];
+  drawLadderGrid();
+  history = [];
+  saveState();
+};
+document.getElementById('colorPicker').onchange = e => currentColor = e.target.value;
+document.getElementById('lineWidth').onchange = e => currentLineWidth = parseInt(e.target.value);
+
   </script>
 </body>
 </html>
