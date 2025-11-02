@@ -16,64 +16,14 @@
     .section { margin-bottom: 20px; }
     .lead-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
     .lead-list label { background: #1e293b; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
-
-    /* Laddergram editor */
-    #laddergramContainer {
-      margin-top: 30px;
-      display: none;
-      background: #f8fafc;
-      color: #222;
-      border-radius: 8px;
-      padding: 15px;
-    }
-    #laddergramContainer h2 {
-      color: #0f172a;
-      margin-bottom: 10px;
-    }
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .toolbar button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .toolbar button.active { background: #15803d; }
-    .toolbar button.clear { background: #dc2626; }
-    .toolbar button.clear:hover { background: #b91c1c; }
-    .color-picker {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      background: #e2e8f0;
-      padding: 3px 8px;
-      border-radius: 4px;
-    }
-    .canvas-container {
-      border: 1px solid #ccc;
-      background: white;
-      overflow: auto;
-      border-radius: 6px;
-    }
-    #ladderCanvas { cursor: crosshair; }
-    .info {
-      margin-top: 10px;
-      padding: 8px;
-      background: #dbeafe;
-      border-radius: 6px;
-      color: #1e3a8a;
-    }
+    #laddergramContainer { display: none; background: #f5f5f5; color: #000; border-radius: 8px; padding: 20px; margin-top: 30px; }
+    .toolbar button { margin-right: 6px; }
+    .toolbar select, .toolbar input[type=color], .toolbar input[type=number] { margin-left: 5px; }
   </style>
 </head>
 <body>
-  <h1>ECG Laddergram Viewer</h1>
-  <p>Select an ECG XML file. The tool will parse rhythm leads and let you choose which to display.</p>
+  <h1>ECG + Laddergram Viewer v1</h1>
+  <p>Select an ECG XML file to display rhythm leads. Toggle the laddergram to draw conduction pathways.</p>
 
   <input type="file" id="fileInput" accept=".xml">
 
@@ -85,638 +35,229 @@
     <input type="range" id="speed" min="6" max="50" step="1" value="25">
 
     <label><input type="checkbox" id="showGrid" checked> Show grid</label>
-    <label><input type="checkbox" id="showLadder"> Show laddergram</label>
+    <label><input type="checkbox" id="toggleLaddergram"> Show Laddergram</label>
     <button id="downloadPng">Download PNG</button>
   </div>
 
   <div id="leadSelector" class="lead-list"></div>
-  <canvas id="canvas"></canvas>
+  <canvas id="ecgCanvas"></canvas>
 
-  <!-- Laddergram Editor -->
   <div id="laddergramContainer">
-    <h2>Ladder Diagram Editor</h2>
+    <h2>ECG Ladder Diagram Tool</h2>
     <div class="toolbar">
       <button id="drawLine" class="active">Draw Line</button>
       <button id="adjust">Adjust</button>
       <button id="drawDot">Draw Symbol</button>
       <button id="eraser">Eraser</button>
 
-      <div class="color-picker">
-        <label>Symbol:</label>
+      <label>Symbol:
         <select id="symbolType">
           <option value="dot">● Dot</option>
           <option value="arrow">→ Arrow</option>
           <option value="singleLine">⊥ Single Line</option>
           <option value="doubleLine">⊥⊥ Double Line</option>
         </select>
-      </div>
+      </label>
 
-      <div class="color-picker">
-        <label>Color:</label>
-        <input type="color" id="colorPicker" value="#000000">
-      </div>
-
-      <div class="color-picker">
-        <label>Line Width:</label>
-        <input type="number" id="lineWidth" min="1" max="10" value="2">
-      </div>
+      <label>Color: <input type="color" id="colorPicker" value="#000000"></label>
+      <label>Line Width: <input type="number" id="lineWidth" min="1" max="10" value="2"></label>
 
       <button id="undo">Undo</button>
       <button id="clear" class="clear">Clear All</button>
     </div>
 
-    <div class="canvas-container">
+    <div class="canvas-container" style="border:2px solid #ddd;background:white;overflow:auto;">
       <canvas id="ladderCanvas" width="1200" height="300"></canvas>
     </div>
 
-    <div class="info">
-      Click and drag to draw. The ladder shows three chambers: Atria (A), AV Node (AV), and Ventricles (V).
-    </div>
+    <p style="margin-top:10px;color:#333;background:#e3f2fd;padding:8px;border-radius:4px;font-size:14px;">
+      Click and drag to draw. The ladder has three chambers: Atria (A), AV Node (AV), and Ventricles (V).
+    </p>
   </div>
 
   <script>
-  // -------------------- ECG Viewer --------------------
-  const fileInput = document.getElementById('fileInput');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const gainSlider = document.getElementById('gain');
-  const gainVal = document.getElementById('gainVal');
-  const speedSlider = document.getElementById('speed');
-  const speedVal = document.getElementById('speedVal');
-  const showGrid = document.getElementById('showGrid');
-  const showLadder = document.getElementById('showLadder');
-  const leadSelector = document.getElementById('leadSelector');
-  const ladderUI = document.getElementById('laddergramContainer');
+    // --- ECG SECTION ---
+    const fileInput = document.getElementById('fileInput');
+    const canvas = document.getElementById('ecgCanvas');
+    const ctx = canvas.getContext('2d');
+    const gainSlider = document.getElementById('gain');
+    const gainVal = document.getElementById('gainVal');
+    const speedSlider = document.getElementById('speed');
+    const speedVal = document.getElementById('speedVal');
+    const showGrid = document.getElementById('showGrid');
+    const leadSelector = document.getElementById('leadSelector');
+    const toggleLaddergram = document.getElementById('toggleLaddergram');
+    const laddergramContainer = document.getElementById('laddergramContainer');
 
-  let allLeads = [];
-  let selectedLeads = [];
+    let allLeads = [];
+    let selectedLeads = [];
 
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => parseXml(reader.result);
-    reader.readAsText(file);
-  });
+    toggleLaddergram.onchange = () => {
+      laddergramContainer.style.display = toggleLaddergram.checked ? 'block' : 'none';
+    };
 
-  gainSlider.oninput = () => { gainVal.textContent = gainSlider.value; draw(); };
-  speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
-  showGrid.onchange = draw;
-  showLadder.onchange = () => {
-    ladderUI.style.display = showLadder.checked ? 'block' : 'none';
-    draw();
-  };
-
-  document.getElementById('downloadPng').onclick = () => {
-    const link = document.createElement('a');
-    link.download = 'ecg_laddergram.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  };
-
-  function parseXml(xmlText) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, "application/xml");
-    const rhythmLeads = doc.querySelectorAll("RhythmLead");
-    allLeads = [];
-
-    rhythmLeads.forEach((lead) => {
-      const id = lead.querySelector("LeadId")?.textContent?.trim() || "Unknown";
-      const sr = parseInt(lead.querySelector("SampleRate")?.textContent) || 500;
-      const res = parseFloat(lead.querySelector("Resolution")?.textContent) || 1.0;
-      const samplesNode = lead.querySelector("Samples");
-      if (!samplesNode) return;
-      const text = samplesNode.textContent.trim();
-      const samples = text.split(/[\s,;]+/).map(Number).filter(n => !isNaN(n));
-      if (samples.length > 10) allLeads.push({ name: id, samples, sampleRate: sr });
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => parseXml(reader.result);
+      reader.readAsText(file);
     });
 
-    buildLeadSelector();
-    draw();
-  }
+    gainSlider.oninput = () => { gainVal.textContent = gainSlider.value; draw(); };
+    speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
+    showGrid.onchange = draw;
 
-  function buildLeadSelector() {
-    leadSelector.innerHTML = '';
-    if (allLeads.length === 0) {
-      leadSelector.innerHTML = '<p>No valid rhythm leads found.</p>';
-      return;
-    }
-    allLeads.forEach((lead) => {
-      const lbl = document.createElement('label');
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = lead.name;
-      cb.checked = true;
-      cb.onchange = () => {
-        selectedLeads = allLeads.filter(l => document.querySelector(`input[value="${l.name}"]`).checked);
-        draw();
-      };
-      lbl.appendChild(cb);
-      lbl.append(' ' + lead.name);
-      leadSelector.appendChild(lbl);
-    });
-    selectedLeads = [...allLeads];
-  }
+    document.getElementById('downloadPng').onclick = () => {
+      const link = document.createElement('a');
+      link.download = 'ecg_view.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
 
-  function draw() {
-    const gain = parseFloat(gainSlider.value);
-    const speed = parseFloat(speedSlider.value);
-    const DPR = window.devicePixelRatio || 1;
-    const width = 1200;
-    const leadHeight = 120;
-    const height = Math.max(leadHeight * selectedLeads.length, 240);
-    canvas.width = width * DPR;
-    canvas.height = height * DPR;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, width, height);
-    if (showGrid.checked) drawGrid(ctx, width, height);
+    function parseXml(xmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, "application/xml");
+      const rhythmLeads = doc.querySelectorAll("RhythmLead");
+      allLeads = [];
 
-    const leftPad = 60;
-    const usableW = width - leftPad - 20;
-    const pxPerSecond = (speed / 25) * (usableW / 10);
+      rhythmLeads.forEach((lead) => {
+        const id = lead.querySelector("LeadId")?.textContent?.trim() || "Unknown";
+        const sr = parseInt(lead.querySelector("SampleRate")?.textContent) || 500;
+        const res = parseFloat(lead.querySelector("Resolution")?.textContent) || 1.0;
+        const samplesNode = lead.querySelector("Samples");
+        if (!samplesNode) return;
+        const text = samplesNode.textContent.trim();
 
-    selectedLeads.forEach((lead, i) => {
-      const centerY = i * leadHeight + leadHeight / 2;
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '14px system-ui';
-      ctx.fillText(lead.name, 8, centerY + 6);
-      ctx.strokeStyle = '#22c1c3';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      const sr = lead.sampleRate || 500;
-      const samples = lead.samples;
-      const samplesPerPixel = sr / pxPerSecond;
-      const peak = Math.max(...samples.map(Math.abs)) || 1;
-      const voltsToPx = (leadHeight * 0.35 * gain) / peak;
-      for (let px = 0; px < usableW; px++) {
-        const s = Math.floor(px * samplesPerPixel);
-        const y = centerY - (samples[s] || 0) * voltsToPx;
-        const x = leftPad + px;
-        if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    });
-  }
+        let samples = [];
+        const isBase64 = /^[A-Za-z0-9+/=\s]+$/.test(text) && !/[\d\s,.-]{50,}/.test(text);
+        if (isBase64) samples = decodeBase64Samples(text, res);
+        else samples = text.split(/[\s,;]+/).map(Number).filter(n => !isNaN(n));
 
-  function drawGrid(ctx, width, height) {
-    ctx.save();
-    const step = 8;
-    ctx.strokeStyle = 'rgba(220,80,80,0.06)';
-    for (let x = 0; x <= width; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
-    for (let y = 0; y <= height; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
-    ctx.strokeStyle = 'rgba(220,80,80,0.12)';
-    for (let x = 0; x <= width; x += step*5) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
-    for (let y = 0; y <= height; y += step*5) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
-    ctx.restore();
-  }
-
-  // -------------------- Ladder Editor Integration --------------------
-  // ---------- Ladder editor (full-featured) ----------
-const ladderContainer = document.getElementById('laddergramContainer');
-const ladderCanvas = document.getElementById('ladderCanvas');
-const lctx = ladderCanvas.getContext('2d');
-
-// Tools & state
-let ladderLines = [];    // {x1,y1,x2,y2,color,width}
-let ladderSymbols = [];  // {x,y,type,color,size,lineAngle,lineIndex,endpoint}
-let ladderHistory = [];
-let ladderIsDrawing = false;
-let ladderTool = 'line'; // 'line' | 'dot' | 'adjust' | 'eraser'
-let ladderColor = '#000000';
-let ladderLineWidth = 2;
-let ladderSymbolType = 'dot';
-let ladderStartX = 0, ladderStartY = 0;
-let ladderDraggingEndpoint = null;
-let ladderDraggingSymbol = null;
-let ladderHoveredEndpoint = null;
-let ladderHoveredSymbol = null;
-
-// chamber geometry (derived from canvas)
-function chamberGeometry() {
-  const h = ladderCanvas.height;
-  const atriaH = h * 0.25;
-  const avH = h * 0.5;
-  const ventH = h - atriaH - avH;
-  const ventLine = atriaH + avH;
-  return { atriaH, avH, ventH, ventLine, h };
-}
-
-// snapping lines (useful for stratified vertical positions)
-function buildSnapLines() {
-  const { atriaH, avH, ventH, ventLine, h } = chamberGeometry();
-  const halfStepA = atriaH / 4;
-  const halfStepAV = avH / 4;
-  const halfStepV = ventH / 4;
-  return [
-    0,
-    halfStepA,
-    atriaH / 2,
-    atriaH - halfStepA,
-    atriaH,
-    atriaH + halfStepAV,
-    atriaH + avH / 2,
-    ventLine - halfStepAV,
-    ventLine,
-    ventLine + halfStepV,
-    ventLine + ventH / 2,
-    h - halfStepV,
-    h
-  ];
-}
-function snapToLine(y) {
-  const snaps = buildSnapLines();
-  let closest = snaps[0], md = Math.abs(y - snaps[0]);
-  for (const s of snaps) { const d = Math.abs(y - s); if (d < md) { md = d; closest = s; } }
-  return closest;
-}
-function isNear(x,y,px,py,th=8){ return Math.abs(x-px)<=th && Math.abs(y-py)<=th; }
-
-// Draw base grid for ladder
-function drawLadderGrid() {
-  const { atriaH, avH, ventH, ventLine, h } = chamberGeometry();
-  // clear
-  lctx.fillStyle = '#ffffff';
-  lctx.fillRect(0,0,ladderCanvas.width, ladderCanvas.height);
-
-  // chamber separators
-  lctx.strokeStyle = '#000';
-  lctx.lineWidth = 2;
-  lctx.beginPath(); lctx.moveTo(0, atriaH); lctx.lineTo(ladderCanvas.width, atriaH); lctx.stroke();
-  lctx.beginPath(); lctx.moveTo(0, ventLine); lctx.lineTo(ladderCanvas.width, ventLine); lctx.stroke();
-
-  // faint vertical grid
-  lctx.strokeStyle = '#e9e9e9';
-  lctx.lineWidth = 1;
-  for (let x=40; x < ladderCanvas.width; x+=40) {
-    lctx.beginPath(); lctx.moveTo(x,0); lctx.lineTo(x, ladderCanvas.height); lctx.stroke();
-  }
-
-  // labels
-  lctx.fillStyle = '#333';
-  lctx.font = 'bold 16px system-ui';
-  lctx.textBaseline = 'middle';
-  lctx.fillText('A (Atria)', 10, atriaH/2);
-  lctx.fillText('AV (AV Node)', 10, atriaH + avH/2);
-  lctx.fillText('V (Ventricles)', 10, ventLine + (h - ventLine)/2);
-}
-
-// Core redraw: grid + lines + symbols + hover indicators
-function redrawLadderCanvas() {
-  drawLadderGrid();
-
-  // draw lines
-  for (let i=0;i<ladderLines.length;i++){
-    const L = ladderLines[i];
-    lctx.strokeStyle = L.color;
-    lctx.lineWidth = L.width;
-    lctx.lineCap = 'round';
-    lctx.beginPath();
-    lctx.moveTo(L.x1, L.y1);
-    lctx.lineTo(L.x2, L.y2);
-    lctx.stroke();
-
-    // arrow if bottom endpoint touches bottom of canvas
-    if (L.y2 >= ladderCanvas.height-1) drawArrowheadL(L.x1,L.y1,L.x2,L.y2,L.color,L.width);
-  }
-
-  // draw symbols
-  for (let i=0;i<ladderSymbols.length;i++){
-    const S = ladderSymbols[i];
-    drawSymbolL(S.x, S.y, S.type, S.color, S.size || 2, S.lineAngle || 0);
-  }
-
-  // hover indicators
-  if (ladderHoveredEndpoint && ladderTool === 'adjust' && !ladderDraggingEndpoint) {
-    const LE = ladderHoveredEndpoint;
-    const L = ladderLines[LE.lineIndex];
-    const px = (LE.endpoint === 'start') ? L.x1 : L.x2;
-    const py = (LE.endpoint === 'start') ? L.y1 : L.y2;
-    lctx.fillStyle = '#2196F3';
-    lctx.beginPath(); lctx.arc(px, py, 6, 0, Math.PI*2); lctx.fill();
-  }
-  if (ladderHoveredSymbol !== null && ladderTool === 'adjust' && !ladderDraggingSymbol) {
-    const S = ladderSymbols[ladderHoveredSymbol];
-    lctx.strokeStyle = '#2196F3';
-    lctx.lineWidth = 2;
-    lctx.beginPath(); lctx.arc(S.x, S.y, (S.size||2)*2.5 + 4, 0, Math.PI*2); lctx.stroke();
-  }
-}
-
-function drawArrowheadL(x1,y1,x2,y2,color,width){
-  const angle = Math.atan2(y2-y1, x2-x1);
-  const arrowLength = 10 + width;
-  const arrowWidth = 6 + width;
-  lctx.fillStyle = color;
-  lctx.beginPath();
-  lctx.moveTo(x2, y2);
-  lctx.lineTo(x2 - arrowLength*Math.cos(angle) - arrowWidth*Math.sin(angle),
-               y2 - arrowLength*Math.sin(angle) + arrowWidth*Math.cos(angle));
-  lctx.lineTo(x2 - arrowLength*Math.cos(angle) + arrowWidth*Math.sin(angle),
-               y2 - arrowLength*Math.sin(angle) - arrowWidth*Math.cos(angle));
-  lctx.closePath();
-  lctx.fill();
-}
-
-function drawSymbolL(x,y,type,color,size=2,lineAngle=0){
-  const radius = size * 2.5;
-  lctx.strokeStyle = color; lctx.fillStyle = color; lctx.lineWidth = 2;
-  switch(type){
-    case 'dot':
-      lctx.beginPath(); lctx.arc(x,y,radius,0,Math.PI*2); lctx.fill(); break;
-    case 'arrow': {
-      const arrowLength = 10 + size;
-      const arrowWidth = 6 + size;
-      const angle = lineAngle;
-      lctx.beginPath();
-      lctx.moveTo(x,y);
-      lctx.lineTo(x - arrowLength*Math.cos(angle) - arrowWidth*Math.sin(angle),
-                   y - arrowLength*Math.sin(angle) + arrowWidth*Math.cos(angle));
-      lctx.lineTo(x - arrowLength*Math.cos(angle) + arrowWidth*Math.sin(angle),
-                   y - arrowLength*Math.sin(angle) - arrowWidth*Math.cos(angle));
-      lctx.closePath(); lctx.fill();
-      break;
-    }
-    case 'singleLine': {
-      const perp = lineAngle + Math.PI/2;
-      const lineLen = radius*1.5;
-      lctx.beginPath();
-      lctx.moveTo(x - lineLen*Math.cos(perp), y - lineLen*Math.sin(perp));
-      lctx.lineTo(x + lineLen*Math.cos(perp), y + lineLen*Math.sin(perp));
-      lctx.stroke();
-      break;
-    }
-    case 'doubleLine': {
-      const perp = lineAngle + Math.PI/2;
-      const lineLen = radius*1.5;
-      const spacing = size*2;
-      lctx.beginPath();
-      lctx.moveTo(x - lineLen*Math.cos(perp) - spacing*Math.cos(lineAngle),
-                  y - lineLen*Math.sin(perp) - spacing*Math.sin(lineAngle));
-      lctx.lineTo(x + lineLen*Math.cos(perp) - spacing*Math.cos(lineAngle),
-                  y + lineLen*Math.sin(perp) - spacing*Math.sin(lineAngle));
-      lctx.stroke();
-      lctx.beginPath();
-      lctx.moveTo(x - lineLen*Math.cos(perp) + spacing*Math.cos(lineAngle),
-                  y - lineLen*Math.sin(perp) + spacing*Math.sin(lineAngle));
-      lctx.lineTo(x + lineLen*Math.cos(perp) + spacing*Math.cos(lineAngle),
-                  y + lineLen*Math.sin(perp) + spacing*Math.sin(lineAngle));
-      lctx.stroke();
-      break;
-    }
-  }
-}
-
-// History
-function saveLadderState(){
-  ladderHistory.push({
-    lines: JSON.parse(JSON.stringify(ladderLines)),
-    symbols: JSON.parse(JSON.stringify(ladderSymbols)),
-    img: ladderCanvas.toDataURL()
-  });
-  if (ladderHistory.length > 40) ladderHistory.shift();
-}
-function undoLadder(){
-  if (ladderHistory.length <= 1) {
-    ladderLines = []; ladderSymbols = [];
-    drawLadderGrid(); return;
-  }
-  ladderHistory.pop();
-  const s = ladderHistory[ladderHistory.length-1];
-  ladderLines = JSON.parse(JSON.stringify(s.lines));
-  ladderSymbols = JSON.parse(JSON.stringify(s.symbols));
-  const img = new Image();
-  img.onload = () => { lctx.clearRect(0,0,ladderCanvas.width, ladderCanvas.height); lctx.drawImage(img,0,0); };
-  img.src = s.img;
-}
-
-// hit tests
-function findEndpointAtPos(x,y){
-  for (let i=0;i<ladderLines.length;i++){
-    const L = ladderLines[i];
-    if (isNear(x,y,L.x1,L.y1)) return { lineIndex: i, endpoint: 'start', x: L.x1, y: L.y1 };
-    if (isNear(x,y,L.x2,L.y2)) return { lineIndex: i, endpoint: 'end', x: L.x2, y: L.y2 };
-  }
-  return null;
-}
-function findSymbolAtPos(x,y){
-  for (let i=0;i<ladderSymbols.length;i++){
-    const S = ladderSymbols[i];
-    if (isNear(x,y,S.x,S.y, 10)) return i;
-  }
-  return null;
-}
-
-// Tool button wiring (expect elements exist inside ladderContainer)
-function wireLadderControls() {
-  const btnDraw = ladderContainer.querySelector('#drawLine');
-  const btnAdj  = ladderContainer.querySelector('#adjust');
-  const btnDot  = ladderContainer.querySelector('#drawDot');
-  const btnEras = ladderContainer.querySelector('#eraser');
-  const btnUndo = ladderContainer.querySelector('#undo');
-  const btnClear= ladderContainer.querySelector('#clear');
-  const selSym  = ladderContainer.querySelector('#symbolType');
-  const colorInput = ladderContainer.querySelector('#colorPicker');
-  const lwInput = ladderContainer.querySelector('#lineWidth');
-
-  if (!btnDraw) return; // safety
-
-  function setActive(button){
-    Array.from(ladderContainer.querySelectorAll('.toolbar button')).forEach(b=>b.classList.remove('active'));
-    if (button) button.classList.add('active');
-  }
-
-  btnDraw.addEventListener('click', ()=>{ ladderTool='line'; setActive(btnDraw); ladderCanvas.style.cursor='crosshair'; });
-  btnAdj.addEventListener('click',  ()=>{ ladderTool='adjust'; setActive(btnAdj); ladderCanvas.style.cursor='default'; });
-  btnDot.addEventListener('click',  ()=>{ ladderTool='dot'; setActive(btnDot); ladderCanvas.style.cursor='crosshair'; });
-  btnEras.addEventListener('click', ()=>{ ladderTool='eraser'; setActive(btnEras); ladderCanvas.style.cursor='crosshair'; });
-  btnUndo.addEventListener('click', undoLadder);
-  btnClear.addEventListener('click', ()=>{
-    ladderLines = []; ladderSymbols = [];
-    drawLadderGrid(); ladderHistory = []; saveLadderState();
-  });
-  selSym.addEventListener('change', e => ladderSymbolType = e.target.value);
-  colorInput.addEventListener('change', e => ladderColor = e.target.value);
-  lwInput.addEventListener('change', e => ladderLineWidth = parseInt(e.target.value) || 2);
-}
-wireLadderControls();
-
-// Mouse interactions for ladderCanvas
-ladderCanvas.addEventListener('mousedown', (ev)=>{
-  const r = ladderCanvas.getBoundingClientRect();
-  const x = ev.clientX - r.left, y = ev.clientY - r.top;
-
-  // adjust: maybe start dragging endpoint or symbol
-  if (ladderTool === 'adjust') {
-    const ep = findEndpointAtPos(x,y);
-    if (ep) { ladderDraggingEndpoint = ep; return; }
-    const symIdx = findSymbolAtPos(x,y);
-    if (symIdx !== null) { ladderDraggingSymbol = symIdx; return; }
-    return;
-  }
-
-  if (ladderTool === 'dot') {
-    // if clicking near endpoint, place symbol snapped to that endpoint
-    const ep = findEndpointAtPos(x,y);
-    if (ep) {
-      const L = ladderLines[ep.lineIndex];
-      const lineAngle = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
-      ladderSymbols.push({
-        x: ep.x, y: ep.y, type: ladderSymbolType, color: ladderColor, size: ladderLineWidth,
-        lineAngle, lineIndex: ep.lineIndex, endpoint: ep.endpoint
+        if (samples.length > 10) allLeads.push({ name: id, samples, sampleRate: sr });
       });
-      saveLadderState(); redrawLadderCanvas(); return;
+
+      buildLeadSelector();
+      draw();
     }
-    // else place symbol freely (snap y)
-    const sy = snapToLine(y);
-    ladderSymbols.push({ x, y: sy, type: ladderSymbolType, color: ladderColor, size: ladderLineWidth, lineAngle: 0 });
-    saveLadderState(); redrawLadderCanvas(); return;
-  }
 
-  if (ladderTool === 'line') {
-    ladderIsDrawing = true;
-    ladderStartX = x; ladderStartY = snapToLine(y);
-    // draw preview while dragging by redrawing grid then existing lines
-    // preserve current state for preview
-    return;
-  }
-
-  if (ladderTool === 'eraser') {
-    // delete nearest symbol or line endpoint if within threshold
-    const sym = findSymbolAtPos(x,y);
-    if (sym !== null) { ladderSymbols.splice(sym,1); saveLadderState(); redrawLadderCanvas(); return; }
-    const ep = findEndpointAtPos(x,y);
-    if (ep) { // remove entire line
-      ladderLines.splice(ep.lineIndex,1); saveLadderState(); redrawLadderCanvas(); return;
+    function decodeBase64Samples(b64, resolution) {
+      const binary = atob(b64.replace(/\s+/g, ""));
+      const len = binary.length;
+      const buffer = new ArrayBuffer(len);
+      const view = new Uint8Array(buffer);
+      for (let i = 0; i < len; i++) view[i] = binary.charCodeAt(i);
+      const dv = new DataView(buffer);
+      const samples = new Array(len / 2);
+      for (let i = 0; i < len; i += 2) samples[i / 2] = dv.getInt16(i, true) * resolution;
+      return samples;
     }
-    // else erase small area: remove any lines/symbols intersecting a small rect
-    const delRect = {x:x-6,y:y-6,w:12,h:12};
-    ladderLines = ladderLines.filter(L => {
-      // simple bounding-box test
-      const minx = Math.min(L.x1,L.x2), maxx = Math.max(L.x1,L.x2);
-      const miny = Math.min(L.y1,L.y2), maxy = Math.max(L.y1,L.y2);
-      const intersects = !(maxx < delRect.x || minx > delRect.x+delRect.w || maxy < delRect.y || miny > delRect.y+delRect.h);
-      return !intersects;
-    });
-    ladderSymbols = ladderSymbols.filter(S => !(S.x >= delRect.x && S.x <= delRect.x+delRect.w && S.y >= delRect.y && S.y <= delRect.y+delRect.h));
-    saveLadderState(); redrawLadderCanvas();
-  }
-});
 
-ladderCanvas.addEventListener('mousemove', (ev)=>{
-  const r = ladderCanvas.getBoundingClientRect();
-  const x = ev.clientX - r.left, y = ev.clientY - r.top;
-
-  // dragging endpoint
-  if (ladderDraggingEndpoint) {
-    const L = ladderLines[ladderDraggingEndpoint.lineIndex];
-    const snappedY = snapToLine(y);
-    if (ladderDraggingEndpoint.endpoint === 'start') { L.x1 = x; L.y1 = snappedY; }
-    else { L.x2 = x; L.y2 = snappedY; }
-    redrawLadderCanvas(); return;
-  }
-
-  // dragging symbol
-  if (ladderDraggingSymbol !== null) {
-    const sym = ladderSymbols[ladderDraggingSymbol];
-    const ep = findEndpointAtPos(x,y);
-    if (ep) {
-      const L = ladderLines[ep.lineIndex];
-      sym.x = ep.x; sym.y = ep.y;
-      sym.lineIndex = ep.lineIndex; sym.endpoint = ep.endpoint;
-      sym.lineAngle = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
-    } else {
-      sym.x = x; sym.y = snapToLine(y);
-      sym.lineIndex = null; sym.endpoint = null; sym.lineAngle = 0;
+    function buildLeadSelector() {
+      leadSelector.innerHTML = '';
+      if (allLeads.length === 0) {
+        leadSelector.innerHTML = '<p>No valid rhythm leads found.</p>';
+        return;
+      }
+      allLeads.forEach((lead) => {
+        const lbl = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = lead.name;
+        cb.checked = true;
+        cb.onchange = () => {
+          selectedLeads = allLeads.filter(l => document.querySelector(`input[value="${l.name}"]`).checked);
+          draw();
+        };
+        lbl.appendChild(cb);
+        lbl.append(' ' + lead.name);
+        leadSelector.appendChild(lbl);
+      });
+      selectedLeads = [...allLeads];
     }
-    redrawLadderCanvas(); return;
-  }
 
-  // if drawing a new line, show preview
-  if (ladderIsDrawing && ladderTool === 'line') {
-    const snappedY = snapToLine(y);
-    // redraw base and lines then preview
-    redrawLadderCanvas();
-    lctx.strokeStyle = ladderColor; lctx.lineWidth = ladderLineWidth;
-    lctx.beginPath(); lctx.moveTo(ladderStartX, ladderStartY); lctx.lineTo(x, snappedY); lctx.stroke();
-    return;
-  }
+    function draw() {
+      const gain = parseFloat(gainSlider.value);
+      const speed = parseFloat(speedSlider.value);
+      const DPR = window.devicePixelRatio || 1;
+      const width = 1200;
+      const leadHeight = 120;
+      const height = Math.max(leadHeight * selectedLeads.length, 240);
+      canvas.width = width * DPR;
+      canvas.height = height * DPR;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+      if (showGrid.checked) drawGrid(ctx, width, height);
 
-  // hover detection (adjust mode)
-  if (ladderTool === 'adjust') {
-    const ep = findEndpointAtPos(x,y);
-    const si = findSymbolAtPos(x,y);
-    if (ep || si !== null) {
-      ladderHoveredEndpoint = ep;
-      ladderHoveredSymbol = si;
-      ladderCanvas.style.cursor = 'pointer';
-    } else {
-      ladderHoveredEndpoint = null;
-      ladderHoveredSymbol = null;
-      ladderCanvas.style.cursor = 'default';
+      const leftPad = 60;
+      const usableW = width - leftPad - 20;
+      const pxPerSecond = (speed / 25) * (usableW / 10);
+
+      selectedLeads.forEach((lead, i) => {
+        const centerY = i * leadHeight + leadHeight / 2;
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '14px system-ui';
+        ctx.fillText(lead.name, 8, centerY + 6);
+        ctx.strokeStyle = '#22c1c3';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        const sr = lead.sampleRate || 500;
+        const samples = lead.samples;
+        const samplesPerPixel = sr / pxPerSecond;
+        const peak = Math.max(...samples.map(Math.abs)) || 1;
+        const voltsToPx = (leadHeight * 0.35 * gain) / peak;
+        for (let px = 0; px < usableW; px++) {
+          const s = Math.floor(px * samplesPerPixel);
+          const y = centerY - (samples[s] || 0) * voltsToPx;
+          const x = leftPad + px;
+          if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      });
     }
-    redrawLadderCanvas();
-    return;
-  }
 
-  // in dot mode show pointer when near endpoint
-  if (ladderTool === 'dot') {
-    const ep = findEndpointAtPos(x,y);
-    ladderCanvas.style.cursor = ep ? 'pointer' : 'crosshair';
-    return;
-  }
-});
+    function drawGrid(ctx, width, height) {
+      ctx.save();
+      const step = 8;
+      ctx.strokeStyle = 'rgba(220,80,80,0.06)';
+      for (let x = 0; x <= width; x += step) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+      for (let y = 0; y <= height; y += step) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(220,80,80,0.12)';
+      for (let x = 0; x <= width; x += step*5) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,height); ctx.stroke(); }
+      for (let y = 0; y <= height; y += step*5) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(width,y); ctx.stroke(); }
+      ctx.restore();
+    }
+  </script>
 
-ladderCanvas.addEventListener('mouseup', (ev)=>{
-  const r = ladderCanvas.getBoundingClientRect();
-  const x = ev.clientX - r.left, y = ev.clientY - r.top;
+  <!-- Laddergram drawing tool logic -->
+  <script>
+    const ladderCanvas = document.getElementById('ladderCanvas');
+    const ladderCtx = ladderCanvas.getContext('2d');
+    let isDrawing = false, currentTool = 'line', currentColor = '#000', currentLineWidth = 2, currentSymbol = 'dot';
+    let lines = [], symbols = [], history = [];
 
-  if (ladderDraggingEndpoint) { ladderDraggingEndpoint = null; saveLadderState(); return; }
-  if (ladderDraggingSymbol !== null) { ladderDraggingSymbol = null; saveLadderState(); return; }
-
-  if (ladderIsDrawing && ladderTool === 'line') {
-    const snappedY = snapToLine(y);
-    ladderLines.push({
-      x1: ladderStartX, y1: ladderStartY,
-      x2: x, y2: snappedY,
-      color: ladderColor, width: ladderLineWidth
-    });
-    ladderIsDrawing = false;
-    saveLadderState();
-    redrawLadderCanvas();
-    return;
-  }
-  ladderIsDrawing = false;
-});
-
-// when leaving canvas, cancel draw
-ladderCanvas.addEventListener('mouseleave', ()=>{ ladderIsDrawing = false; ladderDraggingEndpoint = null; ladderDraggingSymbol = null; });
-
-// initial draw & save
-drawLadderGrid(); redrawLadderCanvas(); saveLadderState();
-
-// wire controls if container exists
-if (ladderContainer) {
-  // ensure the buttons exist inside container; if not, query document (backwards compat)
-  if (!ladderContainer.querySelector('#drawLine')) {
-    // try global IDs
-  }
-  wireLadderControls(); // uses the controls inside ladderContainer
-}
-
-// Show/hide ladder container when toggle changes (assuming showLadder exists)
-if (typeof showLadder !== 'undefined') {
-  showLadder.onchange = () => {
-    ladderContainer.style.display = showLadder.checked ? 'block' : 'none';
-    // redraw ladder to ensure crisp rendering when shown
-    if (showLadder.checked) { drawLadderGrid(); redrawLadderCanvas(); }
-    draw(); // redraw ECG + ladder area (keeps ECG updated)
-  };
-}
-
-    
+    const atriaHeight = ladderCanvas.height * 0.25;
+    const avHeight = ladderCanvas.height * 0.5;
+    const ventricleLine = atriaHeight + avHeight;
+    function drawGridLadder() {
+      ladderCtx.fillStyle = '#fff';
+      ladderCtx.fillRect(0, 0, ladderCanvas.width, ladderCanvas.height);
+      ladderCtx.strokeStyle = '#000'; ladderCtx.lineWidth = 2;
+      ladderCtx.beginPath(); ladderCtx.moveTo(0, atriaHeight); ladderCtx.lineTo(ladderCanvas.width, atriaHeight); ladderCtx.stroke();
+      ladderCtx.beginPath(); ladderCtx.moveTo(0, ventricleLine); ladderCtx.lineTo(ladderCanvas.width, ventricleLine); ladderCtx.stroke();
+      ladderCtx.strokeStyle = '#eee'; ladderCtx.lineWidth = 1;
+      for (let x = 40; x < ladderCanvas.width; x += 40) {
+        ladderCtx.beginPath(); ladderCtx.moveTo(x, 0); ladderCtx.lineTo(x, ladderCanvas.height); ladderCtx.stroke();
+      }
+      ladderCtx.fillStyle = '#333'; ladderCtx.font = 'bold 20px Arial'; ladderCtx.textBaseline = 'middle';
+      ladderCtx.fillText('A (Atria)', 10, atriaHeight / 2);
+      ladderCtx.fillText('AV (AV Node)', 10, atriaHeight + avHeight / 2);
+      ladderCtx.fillText('V (Ventricles)', 10, ventricleLine + (ladderCanvas.height - ventricleLine) / 2);
+    }
+    drawGridLadder();
   </script>
 </body>
 </html>
