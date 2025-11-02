@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-  <h1>ECG Laddergram Viewer (RhythmLead XML)</h1>
+  <h1>ECG Laddergram Viewer (RhythmLead XML) v1</h1>
   <p>Select an ECG XML file. The tool will parse rhythm leads and let you choose which to display.</p>
 
   <input type="file" id="fileInput" accept=".xml">
@@ -71,7 +71,7 @@
     link.click();
   };
 
-  function parseXml(xmlText) {
+function parseXml(xmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlText, "application/xml");
   const rhythmLeads = doc.querySelectorAll("RhythmLead");
@@ -84,23 +84,35 @@
 
     const samplesNode = lead.querySelector("Samples");
     if (!samplesNode) return;
-    const text = samplesNode.textContent.trim();
+    let text = samplesNode.textContent.trim();
 
-    // Detect base64 by presence of non-numeric chars
-    const isBase64 = /^[A-Za-z0-9+/=\\s]+$/.test(text) && !/[\\d\\s,.-]{50,}/.test(text);
+    // Remove whitespace and line breaks
+    text = text.replace(/\\s+/g, "");
+
+    // Decide how to decode: base64 vs numeric
     let samples = [];
-
-    if (isBase64) {
-      samples = decodeBase64Samples(text, res);
+    const looksNumeric = /^[-+0-9.,\\s]+$/.test(text);
+    if (!looksNumeric || text.length > 1000) {
+      // most likely base64
+      try {
+        samples = decodeBase64Samples(text, res);
+        console.log(`Decoded ${samples.length} samples for lead ${id}`);
+      } catch (e) {
+        console.warn("Base64 decode failed for lead", id, e);
+      }
     } else {
-      // fallback for numeric space-separated values
+      // fallback numeric
       samples = text.split(/[\\s,;]+/).map(Number).filter(n => !isNaN(n));
     }
 
     if (samples.length > 10) {
       allLeads.push({ name: id, samples, sampleRate: sr });
+    } else {
+      console.warn(`No valid samples for ${id}`);
     }
   });
+
+  console.log("Parsed leads:", allLeads.map(l => `${l.name} (${l.samples.length})`));
 
   buildLeadSelector();
   draw();
@@ -108,18 +120,17 @@
 
 // Decode base64 -> Int16 waveform -> µV
 function decodeBase64Samples(b64, resolution) {
-  // strip whitespace and decode
-  const binary = atob(b64.replace(/\\s+/g, ""));
+  const binary = atob(b64);
   const len = binary.length;
   const buffer = new ArrayBuffer(len);
   const view = new Uint8Array(buffer);
   for (let i = 0; i < len; i++) view[i] = binary.charCodeAt(i);
 
-  // interpret as 16-bit signed little-endian integers
   const dv = new DataView(buffer);
-  const samples = new Array(len / 2);
-  for (let i = 0; i < len; i += 2) {
-    samples[i / 2] = dv.getInt16(i, true) * resolution; // µV
+  const count = Math.floor(len / 2);
+  const samples = new Array(count);
+  for (let i = 0; i < count; i++) {
+    samples[i] = dv.getInt16(i * 2, true) * resolution; // µV
   }
   return samples;
 }
