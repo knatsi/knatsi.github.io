@@ -39,74 +39,83 @@
   <canvas id="canvas"></canvas>
 
   <script>
-    const fileInput = document.getElementById('fileInput');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const gainSlider = document.getElementById('gain');
-    const gainVal = document.getElementById('gainVal');
-    const speedSlider = document.getElementById('speed');
-    const speedVal = document.getElementById('speedVal');
-    const showGrid = document.getElementById('showGrid');
-    const leadSelector = document.getElementById('leadSelector');
+  const fileInput = document.getElementById('fileInput');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const gainSlider = document.getElementById('gain');
+  const gainVal = document.getElementById('gainVal');
+  const speedSlider = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  const showGrid = document.getElementById('showGrid');
+  const leadSelector = document.getElementById('leadSelector');
 
-    let allLeads = [];
-    let selectedLeads = [];
+  let allLeads = [];
+  let selectedLeads = [];
 
-    fileInput.addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        parseXml(reader.result);
-      };
-      reader.readAsText(file);
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => parseXml(reader.result);
+    reader.readAsText(file);
+  });
+
+  gainSlider.oninput = () => { gainVal.textContent = gainSlider.value; draw(); };
+  speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
+  showGrid.onchange = draw;
+
+  document.getElementById('downloadPng').onclick = () => {
+    const link = document.createElement('a');
+    link.download = 'ecg_laddergram.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  function parseXml(xmlText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, 'application/xml');
+    const rhythmLeads = doc.querySelectorAll('RhythmLead');
+    allLeads = [];
+
+    rhythmLeads.forEach((lead) => {
+      const id = lead.querySelector('LeadId')?.textContent?.trim() || 'Unknown';
+      const sr = parseInt(lead.querySelector('SampleRate')?.textContent) || 500;
+      let samplesText = lead.querySelector('Samples')?.textContent || '';
+      // Normalize whitespace and commas
+      samplesText = samplesText.replace(/[^0-9+\\-.,eE\\s]/g, ' ').replace(/[\\n\\r\\t]+/g, ' ');
+      const samples = samplesText.split(/[\\s,;]+/).map(Number).filter(n => !isNaN(n));
+      if (samples.length > 10) {
+        allLeads.push({ name: id, samples, sampleRate: sr });
+      }
     });
 
-    gainSlider.oninput = () => { gainVal.textContent = gainSlider.value; draw(); };
-    speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
-    showGrid.onchange = draw;
+    buildLeadSelector();
+    draw();
+  }
 
-    document.getElementById('downloadPng').onclick = () => {
-      const link = document.createElement('a');
-      link.download = 'ecg_laddergram.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    };
-
-    function parseXml(xmlText) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlText, 'application/xml');
-      const rhythmLeads = doc.querySelectorAll('RhythmLead');
-      allLeads = [];
-      rhythmLeads.forEach((lead) => {
-        const id = lead.querySelector('LeadId')?.textContent?.trim() || 'Unknown';
-        const sr = parseInt(lead.querySelector('SampleRate')?.textContent) || 500;
-        const dataText = lead.querySelector('Samples')?.textContent?.trim() || '';
-        const samples = dataText.split(/[\s,;]+/).map(Number).filter(n => !isNaN(n));
-        if (samples.length > 0) allLeads.push({ name: id, samples, sampleRate: sr });
-      });
-      buildLeadSelector();
-      draw();
+  function buildLeadSelector() {
+    leadSelector.innerHTML = '';
+    if (allLeads.length === 0) {
+      leadSelector.innerHTML = '<p>No valid rhythm leads found in XML.</p>';
+      return;
     }
-
-    function buildLeadSelector() {
-      leadSelector.innerHTML = '';
-      allLeads.forEach((lead, i) => {
-        const lbl = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = lead.name;
-        cb.checked = true;
-        cb.onchange = () => {
-          selectedLeads = allLeads.filter(l => document.querySelector(`input[value="${l.name}"]`).checked);
-          draw();
-        };
-        lbl.appendChild(cb);
-        lbl.append(' ' + lead.name);
-        leadSelector.appendChild(lbl);
-      });
-      selectedLeads = [...allLeads];
-    }
+    allLeads.forEach((lead) => {
+      const lbl = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = lead.name;
+      cb.checked = true;
+      cb.onchange = () => {
+        selectedLeads = allLeads.filter(l => document.querySelector(`input[value=\"${l.name}\"]`).checked);
+        draw();
+      };
+      lbl.appendChild(cb);
+      lbl.append(' ' + lead.name);
+      leadSelector.appendChild(lbl);
+    });
+    selectedLeads = [...allLeads];
+  }
+    
 
     function draw() {
       const gain = parseFloat(gainSlider.value);
