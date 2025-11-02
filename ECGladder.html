@@ -146,7 +146,7 @@
   const showGrid = document.getElementById('showGrid');
   const showLadder = document.getElementById('showLadder');
   const leadSelector = document.getElementById('leadSelector');
-  const ladderContainer = document.getElementById('laddergramContainer');
+  const ladderUI = document.getElementById('laddergramContainer');
 
   let allLeads = [];
   let selectedLeads = [];
@@ -163,7 +163,7 @@
   speedSlider.oninput = () => { speedVal.textContent = speedSlider.value; draw(); };
   showGrid.onchange = draw;
   showLadder.onchange = () => {
-    ladderContainer.style.display = showLadder.checked ? 'block' : 'none';
+    ladderUI.style.display = showLadder.checked ? 'block' : 'none';
     draw();
   };
 
