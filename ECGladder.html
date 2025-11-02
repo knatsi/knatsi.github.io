@@ -72,27 +72,58 @@
   };
 
   function parseXml(xmlText) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xmlText, 'application/xml');
-    const rhythmLeads = doc.querySelectorAll('RhythmLead');
-    allLeads = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, "application/xml");
+  const rhythmLeads = doc.querySelectorAll("RhythmLead");
+  allLeads = [];
 
-    rhythmLeads.forEach((lead) => {
-      const id = lead.querySelector('LeadId')?.textContent?.trim() || 'Unknown';
-      const sr = parseInt(lead.querySelector('SampleRate')?.textContent) || 500;
-      let samplesText = lead.querySelector('Samples')?.textContent || '';
-      // Normalize whitespace and commas
-      samplesText = samplesText.replace(/[^0-9+\\-.,eE\\s]/g, ' ').replace(/[\\n\\r\\t]+/g, ' ');
-      const samples = samplesText.split(/[\\s,;]+/).map(Number).filter(n => !isNaN(n));
-      if (samples.length > 10) {
-        allLeads.push({ name: id, samples, sampleRate: sr });
-      }
-    });
+  rhythmLeads.forEach((lead) => {
+    const id = lead.querySelector("LeadId")?.textContent?.trim() || "Unknown";
+    const sr = parseInt(lead.querySelector("SampleRate")?.textContent) || 500;
+    const res = parseFloat(lead.querySelector("Resolution")?.textContent) || 1.0;
 
-    buildLeadSelector();
-    draw();
+    const samplesNode = lead.querySelector("Samples");
+    if (!samplesNode) return;
+    const text = samplesNode.textContent.trim();
+
+    // Detect base64 by presence of non-numeric chars
+    const isBase64 = /^[A-Za-z0-9+/=\\s]+$/.test(text) && !/[\\d\\s,.-]{50,}/.test(text);
+    let samples = [];
+
+    if (isBase64) {
+      samples = decodeBase64Samples(text, res);
+    } else {
+      // fallback for numeric space-separated values
+      samples = text.split(/[\\s,;]+/).map(Number).filter(n => !isNaN(n));
+    }
+
+    if (samples.length > 10) {
+      allLeads.push({ name: id, samples, sampleRate: sr });
+    }
+  });
+
+  buildLeadSelector();
+  draw();
+}
+
+// Decode base64 -> Int16 waveform -> µV
+function decodeBase64Samples(b64, resolution) {
+  // strip whitespace and decode
+  const binary = atob(b64.replace(/\\s+/g, ""));
+  const len = binary.length;
+  const buffer = new ArrayBuffer(len);
+  const view = new Uint8Array(buffer);
+  for (let i = 0; i < len; i++) view[i] = binary.charCodeAt(i);
+
+  // interpret as 16-bit signed little-endian integers
+  const dv = new DataView(buffer);
+  const samples = new Array(len / 2);
+  for (let i = 0; i < len; i += 2) {
+    samples[i / 2] = dv.getInt16(i, true) * resolution; // µV
   }
-
+  return samples;
+}
+    
   function buildLeadSelector() {
     leadSelector.innerHTML = '';
     if (allLeads.length === 0) {
