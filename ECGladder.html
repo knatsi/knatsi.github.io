@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ECG Laddergram Viewer v1</title>
+  <title>ECG Laddergram Viewer v2</title>
   <style>
     body { background-color: #0f172a; color: #e6eef8; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
     h1 { font-size: 1.5rem; margin-bottom: 10px; }
@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-  <h1>ECG Laddergram Viewer (RhythmLead XML) v1</h1>
+  <h1>ECG Laddergram Viewer (RhythmLead XML)</h1>
   <p>Select an ECG XML file. The tool will parse rhythm leads and let you choose which to display.</p>
 
   <input type="file" id="fileInput" accept=".xml">
@@ -32,6 +32,7 @@
     <input type="range" id="speed" min="6" max="50" step="1" value="25">
 
     <label><input type="checkbox" id="showGrid" checked> Show grid</label>
+    <label><input type="checkbox" id="showLadder"> Show laddergram</label>
     <button id="downloadPng">Download PNG</button>
   </div>
 
@@ -48,6 +49,8 @@
   const speedVal = document.getElementById('speedVal');
   const showGrid = document.getElementById('showGrid');
   const leadSelector = document.getElementById('leadSelector');
+  const showLadder = document.getElementById('showLadder');
+    showLadder.onchange = draw;
 
   let allLeads = [];
   let selectedLeads = [];
@@ -159,48 +162,102 @@ function decodeBase64Samples(b64, resolution) {
   }
     
 
-    function draw() {
-      const gain = parseFloat(gainSlider.value);
-      const speed = parseFloat(speedSlider.value);
-      const DPR = window.devicePixelRatio || 1;
-      const width = 1200;
-      const leadHeight = 120;
-      const height = Math.max(leadHeight * selectedLeads.length, 240);
-      canvas.width = width * DPR;
-      canvas.height = height * DPR;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, width, height);
-      if (showGrid.checked) drawGrid(ctx, width, height);
+ function draw() {
+  const gain = parseFloat(gainSlider.value);
+  const speed = parseFloat(speedSlider.value);
+  const DPR = window.devicePixelRatio || 1;
+  const width = 1200;
+  const leadHeight = showLadder.checked ? 200 : 120;
+  const height = showLadder.checked ? 300 : Math.max(leadHeight * selectedLeads.length, 240);
+  canvas.width = width * DPR;
+  canvas.height = height * DPR;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, width, height);
+  if (showGrid.checked) drawGrid(ctx, width, height);
 
-      const leftPad = 60;
-      const usableW = width - leftPad - 20;
-      const pxPerSecond = (speed / 25) * (usableW / 10);
+  if (showLadder.checked) {
+    drawLaddergram();
+    return;
+  }
 
-      selectedLeads.forEach((lead, i) => {
-        const centerY = i * leadHeight + leadHeight / 2;
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '14px system-ui';
-        ctx.fillText(lead.name, 8, centerY + 6);
-        ctx.strokeStyle = '#22c1c3';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        const sr = lead.sampleRate || 500;
-        const samples = lead.samples;
-        const samplesPerPixel = sr / pxPerSecond;
-        const peak = Math.max(...samples.map(Math.abs)) || 1;
-        const voltsToPx = (leadHeight * 0.35 * gain) / peak;
-        for (let px = 0; px < usableW; px++) {
-          const s = Math.floor(px * samplesPerPixel);
-          const y = centerY - (samples[s] || 0) * voltsToPx;
-          const x = leftPad + px;
-          if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      });
+  const leftPad = 60;
+  const usableW = width - leftPad - 20;
+  const pxPerSecond = (speed / 25) * (usableW / 10);
+
+  selectedLeads.forEach((lead, i) => {
+    const centerY = i * leadHeight + leadHeight / 2;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px system-ui';
+    ctx.fillText(lead.name, 8, centerY + 6);
+    ctx.strokeStyle = '#22c1c3';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const sr = lead.sampleRate || 500;
+    const samples = lead.samples;
+    const samplesPerPixel = sr / pxPerSecond;
+    const peak = Math.max(...samples.map(Math.abs)) || 1;
+    const voltsToPx = (leadHeight * 0.35 * gain) / peak;
+    for (let px = 0; px < usableW; px++) {
+      const s = Math.floor(px * samplesPerPixel);
+      const y = centerY - (samples[s] || 0) * voltsToPx;
+      const x = leftPad + px;
+      if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
+    ctx.stroke();
+  });
+}
+
+    function draw() {
+  const gain = parseFloat(gainSlider.value);
+  const speed = parseFloat(speedSlider.value);
+  const DPR = window.devicePixelRatio || 1;
+  const width = 1200;
+  const leadHeight = showLadder.checked ? 200 : 120;
+  const height = showLadder.checked ? 300 : Math.max(leadHeight * selectedLeads.length, 240);
+  canvas.width = width * DPR;
+  canvas.height = height * DPR;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, width, height);
+  if (showGrid.checked) drawGrid(ctx, width, height);
+
+  if (showLadder.checked) {
+    drawLaddergram();
+    return;
+  }
+
+  const leftPad = 60;
+  const usableW = width - leftPad - 20;
+  const pxPerSecond = (speed / 25) * (usableW / 10);
+
+  selectedLeads.forEach((lead, i) => {
+    const centerY = i * leadHeight + leadHeight / 2;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px system-ui';
+    ctx.fillText(lead.name, 8, centerY + 6);
+    ctx.strokeStyle = '#22c1c3';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const sr = lead.sampleRate || 500;
+    const samples = lead.samples;
+    const samplesPerPixel = sr / pxPerSecond;
+    const peak = Math.max(...samples.map(Math.abs)) || 1;
+    const voltsToPx = (leadHeight * 0.35 * gain) / peak;
+    for (let px = 0; px < usableW; px++) {
+      const s = Math.floor(px * samplesPerPixel);
+      const y = centerY - (samples[s] || 0) * voltsToPx;
+      const x = leftPad + px;
+      if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  });
+}
+
 
     function drawGrid(ctx, width, height) {
       ctx.save();
