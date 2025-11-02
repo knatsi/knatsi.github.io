@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ECG Laddergram Viewer v2</title>
+  <title>ECG Laddergram Viewer v3</title>
   <style>
     body { background-color: #0f172a; color: #e6eef8; font-family: system-ui, sans-serif; margin: 0; padding: 20px; }
     h1 { font-size: 1.5rem; margin-bottom: 10px; }
@@ -167,8 +167,11 @@ function decodeBase64Samples(b64, resolution) {
   const speed = parseFloat(speedSlider.value);
   const DPR = window.devicePixelRatio || 1;
   const width = 1200;
-  const leadHeight = showLadder.checked ? 200 : 120;
-  const height = showLadder.checked ? 300 : Math.max(leadHeight * selectedLeads.length, 240);
+  const leadHeight = 120;
+  const ladderHeight = showLadder.checked ? 260 : 0;
+  const height = Math.max(leadHeight * selectedLeads.length + ladderHeight + 40, 300);
+
+  // Prepare canvas
   canvas.width = width * DPR;
   canvas.height = height * DPR;
   canvas.style.width = width + 'px';
@@ -176,19 +179,16 @@ function decodeBase64Samples(b64, resolution) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, width, height);
+
   if (showGrid.checked) drawGrid(ctx, width, height);
 
-  if (showLadder.checked) {
-    drawLaddergram();
-    return;
-  }
-
+  // === Draw ECG leads ===
   const leftPad = 60;
   const usableW = width - leftPad - 20;
   const pxPerSecond = (speed / 25) * (usableW / 10);
 
   selectedLeads.forEach((lead, i) => {
-    const centerY = i * leadHeight + leadHeight / 2;
+    const centerY = i * leadHeight + leadHeight / 2 + 20;
     ctx.fillStyle = '#e2e8f0';
     ctx.font = '14px system-ui';
     ctx.fillText(lead.name, 8, centerY + 6);
@@ -200,6 +200,7 @@ function decodeBase64Samples(b64, resolution) {
     const samplesPerPixel = sr / pxPerSecond;
     const peak = Math.max(...samples.map(Math.abs)) || 1;
     const voltsToPx = (leadHeight * 0.35 * gain) / peak;
+
     for (let px = 0; px < usableW; px++) {
       const s = Math.floor(px * samplesPerPixel);
       const y = centerY - (samples[s] || 0) * voltsToPx;
@@ -208,57 +209,75 @@ function decodeBase64Samples(b64, resolution) {
     }
     ctx.stroke();
   });
+
+  // === Draw laddergram below ECG ===
+  if (showLadder.checked) {
+    drawLaddergram(width, height - ladderHeight, usableW, leftPad);
+  }
 }
 
-    function draw() {
-  const gain = parseFloat(gainSlider.value);
-  const speed = parseFloat(speedSlider.value);
-  const DPR = window.devicePixelRatio || 1;
-  const width = 1200;
-  const leadHeight = showLadder.checked ? 200 : 120;
-  const height = showLadder.checked ? 300 : Math.max(leadHeight * selectedLeads.length, 240);
-  canvas.width = width * DPR;
-  canvas.height = height * DPR;
-  canvas.style.width = width + 'px';
-  canvas.style.height = height + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 0, width, height);
-  if (showGrid.checked) drawGrid(ctx, width, height);
+function drawLaddergram(width, offsetY, usableW, leftPad) {
+  const height = 260;
+  const baseY = offsetY + 20;
 
-  if (showLadder.checked) {
-    drawLaddergram();
-    return;
+  // conduction levels
+  const levels = [
+    { name: "Atria", y: baseY + 40, color: "#ef4444" },
+    { name: "AV Node", y: baseY + 120, color: "#facc15" },
+    { name: "Ventricles", y: baseY + 200, color: "#22c55e" }
+  ];
+
+  // Labels
+  ctx.font = "16px system-ui";
+  ctx.fillStyle = "#e2e8f0";
+  levels.forEach(l => ctx.fillText(l.name, 8, l.y + 5));
+
+  if (!selectedLeads.length) return;
+  const lead = selectedLeads[0];
+  const samples = lead.samples;
+  const sr = lead.sampleRate;
+  const duration = samples.length / sr;
+  const pxPerSecond = usableW / duration;
+
+  // Simple peak detection
+  const threshold = 0.6 * Math.max(...samples.map(Math.abs));
+  const peaks = [];
+  for (let i = 1; i < samples.length - 1; i++) {
+    if (samples[i] > threshold && samples[i] > samples[i - 1] && samples[i] > samples[i + 1]) {
+      const t = i / sr;
+      peaks.push(t);
+    }
   }
 
-  const leftPad = 60;
-  const usableW = width - leftPad - 20;
-  const pxPerSecond = (speed / 25) * (usableW / 10);
+  // vertical grid lines for timing
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.beginPath();
+  for (let x = leftPad; x <= width - 20; x += pxPerSecond * 0.2) {
+    ctx.moveTo(x, baseY);
+    ctx.lineTo(x, baseY + height);
+  }
+  ctx.stroke();
 
-  selectedLeads.forEach((lead, i) => {
-    const centerY = i * leadHeight + leadHeight / 2;
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = '14px system-ui';
-    ctx.fillText(lead.name, 8, centerY + 6);
-    ctx.strokeStyle = '#22c1c3';
-    ctx.lineWidth = 1.2;
+  // draw conduction events
+  peaks.forEach(t => {
+    const x = leftPad + t * pxPerSecond;
+    // small circles
+    levels.forEach(l => {
+      ctx.beginPath();
+      ctx.arc(x, l.y, 3, 0, 2 * Math.PI);
+      ctx.fillStyle = l.color;
+      ctx.fill();
+    });
+    // conduction path lines
+    ctx.strokeStyle = "#38bdf8";
     ctx.beginPath();
-    const sr = lead.sampleRate || 500;
-    const samples = lead.samples;
-    const samplesPerPixel = sr / pxPerSecond;
-    const peak = Math.max(...samples.map(Math.abs)) || 1;
-    const voltsToPx = (leadHeight * 0.35 * gain) / peak;
-    for (let px = 0; px < usableW; px++) {
-      const s = Math.floor(px * samplesPerPixel);
-      const y = centerY - (samples[s] || 0) * voltsToPx;
-      const x = leftPad + px;
-      if (px === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
+    ctx.moveTo(x, levels[0].y);
+    ctx.lineTo(x + 20, levels[1].y);
+    ctx.lineTo(x + 40, levels[2].y);
     ctx.stroke();
   });
 }
-
-
+    
     function drawGrid(ctx, width, height) {
       ctx.save();
       const step = 8;
