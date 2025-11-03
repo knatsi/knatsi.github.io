@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v1</title>
+    <title>ECG Ladder Diagram v2</title>
     <style>
         * {
             margin: 0;
@@ -437,85 +437,90 @@
         }
         
         function drawECG() {
-            if (!currentLead || !ecgData) return;
-            
-            const leadData = ecgData[currentLead];
-            if (!leadData) return;
-            
-            const padding = 10;
-            const drawWidth = canvas.width - padding * 2;
-            const drawHeight = ecgHeight - 40;
-            const yOffset = 30;
-            
-            // Find min and max for scaling
-            const min = Math.min(...leadData);
-            const max = Math.max(...leadData);
-            const range = max - min;
-            const selectedLeadSignal = leads[selectedLead]; // your existing array of samples
-            const qrsRegions = detectQRS(selectedLeadSignal, 0.7, 8);
-                drawQRSMarkers(ctx, qrsRegions, ventricleLineY, scaleX);
-            
-            if (range === 0) return;
-            
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            
-            leadData.forEach((value, index) => {
-                const x = padding + (index / leadData.length) * drawWidth;
-                const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
-                
-                if (index === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            });
-            
-            ctx.stroke();
-        }
+    if (!currentLead || !ecgData) return;
 
-        function detectQRS(signal, thresholdSlope = 0.5, minWidth = 10) {
-  const derivative = [];
-  for (let i = 1; i < signal.length; i++) {
-    derivative.push(Math.abs(signal[i] - signal[i - 1]));
-  }
+    const leadData = ecgData[currentLead];
+    if (!leadData) return;
 
-  const qrsRegions = [];
-  let inQRS = false;
-  let start = 0;
+    const padding = 10;
+    const drawWidth = canvas.width - padding * 2;
+    const drawHeight = ecgHeight - 40;
+    const yOffset = 30;
 
-  for (let i = 0; i < derivative.length; i++) {
-    if (derivative[i] > thresholdSlope && !inQRS) {
-      inQRS = true;
-      start = i;
-    } else if (derivative[i] <= thresholdSlope && inQRS) {
-      inQRS = false;
-      if (i - start >= minWidth) {
-        qrsRegions.push({ start, end: i });
-      }
+    // Find min and max for scaling
+    const min = Math.min(...leadData);
+    const max = Math.max(...leadData);
+    const range = max - min;
+    if (range === 0) return;
+
+    // Scaling for X coordinates
+    const scaleX = drawWidth / leadData.length;
+
+    // Pick a "ventricle line" — baseline at bottom of ECG plot
+    const ventricleLineY = yOffset + drawHeight;
+
+    // ---- QRS DETECTION ----
+    const qrsRegions = detectQRS(leadData, 0.7, 8);
+
+    // ---- DRAW ECG ----
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+
+    leadData.forEach((value, index) => {
+        const x = padding + index * scaleX;
+        const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // ---- DRAW QRS MARKERS ----
+    drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
+}
+function detectQRS(signal, thresholdSlope = 0.5, minWidth = 10) {
+    const derivative = [];
+    for (let i = 1; i < signal.length; i++) {
+        derivative.push(Math.abs(signal[i] - signal[i - 1]));
     }
-  }
-  return qrsRegions;
+
+    const qrsRegions = [];
+    let inQRS = false;
+    let start = 0;
+
+    for (let i = 0; i < derivative.length; i++) {
+        if (derivative[i] > thresholdSlope && !inQRS) {
+            inQRS = true;
+            start = i;
+        } else if (derivative[i] <= thresholdSlope && inQRS) {
+            inQRS = false;
+            if (i - start >= minWidth) qrsRegions.push({ start, end: i });
+        }
+    }
+    return qrsRegions;
 }
 
-function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, scaleX) {
-  ctx.strokeStyle = 'red';
-  ctx.lineWidth = 1;
+function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 1;
 
-  qrsRegions.forEach(region => {
-    const x = region.start * scaleX;
-    ctx.beginPath();
-    ctx.moveTo(x, ventricleLineY);
-    ctx.lineTo(x, ctx.canvas.height);
-    ctx.stroke();
+    qrsRegions.forEach(region => {
+        const xStart = padding + region.start * scaleX;
+        const xEnd = padding + region.end * scaleX;
 
-    const xEnd = region.end * scaleX;
-    ctx.beginPath();
-    ctx.moveTo(xEnd, ventricleLineY);
-    ctx.lineTo(xEnd, ctx.canvas.height);
-    ctx.stroke();
-  });
+        // Start line
+        ctx.beginPath();
+        ctx.moveTo(xStart, ventricleLineY);
+        ctx.lineTo(xStart, ctx.canvas.height);
+        ctx.stroke();
+
+        // End line
+        ctx.beginPath();
+        ctx.moveTo(xEnd, ventricleLineY);
+        ctx.lineTo(xEnd, ctx.canvas.height);
+        ctx.stroke();
+    });
 }
         
         function parseECGXML(xmlText) {
