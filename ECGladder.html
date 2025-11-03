@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v3.1</title>
+    <title>ECG Ladder Diagram v3.2</title>
     <style>
         * {
             margin: 0;
@@ -464,10 +464,8 @@
     const ventricleLineY = yOffset + drawHeight;
 
     // ---- QRS DETECTION ----
-    // ---- QRS DETECTION ----
     const sensitivity = parseFloat(document.getElementById("sensitivitySlider").value);
     const qrsRegions = detectQRS(leadData, sensitivity, 8);
-
 
     // ---- DRAW ECG ----
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -485,6 +483,10 @@
 
     // ---- DRAW QRS MARKERS ----
     drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
+
+    // ---- P-WAVES DRAW and DETECTION ----
+    const pRegions = detectPWaves(leadData, qrsRegions);
+    drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX);
 }
 function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) {
   if (!signal || signal.length < 2) return [];
@@ -536,6 +538,51 @@ function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) 
   return mergedRegions;
 }
 
+function detectPWaves(signal, qrsRegions) {
+  const pRegions = [];
+  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
+
+  // How far before QRS we look (in samples)
+  const searchWindow = 80;  // tune for your sampling rate (~150ms)
+  const minWidth = 10;
+  const threshold = amplitudeRange * 0.05; // smaller threshold than QRS
+
+  qrsRegions.forEach(qrs => {
+    const endSearch = Math.max(0, qrs.start - 5);
+    const startSearch = Math.max(0, qrs.start - searchWindow);
+
+    let segment = signal.slice(startSearch, endSearch);
+
+    if (segment.length < 5) return;
+
+    // Compute derivative magnitude
+    const derivative = [];
+    for (let i = 1; i < segment.length; i++) {
+      derivative.push(Math.abs(segment[i] - segment[i - 1]));
+    }
+
+    // Find contiguous region above threshold
+    let inP = false;
+    let start = 0;
+    for (let i = 0; i < derivative.length; i++) {
+      if (!inP && derivative[i] > threshold) {
+        inP = true;
+        start = i;
+      } else if (inP && derivative[i] < threshold * 0.5) {
+        inP = false;
+        if (i - start >= minWidth) {
+          pRegions.push({
+            start: startSearch + start,
+            end: startSearch + i
+          });
+        }
+      }
+    }
+  });
+
+  return pRegions;
+}
+
 function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
     ctx.strokeStyle = 'red';
     ctx.lineWidth = 1;
@@ -556,6 +603,28 @@ function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
         ctx.lineTo(xEnd, ctx.canvas.height);
         ctx.stroke();
     });
+}
+
+function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
+  ctx.strokeStyle = 'green';
+  ctx.lineWidth = 1;
+
+  pRegions.forEach(region => {
+    const xStart = padding + region.start * scaleX;
+    const xEnd = padding + region.end * scaleX;
+
+    // Start line
+    ctx.beginPath();
+    ctx.moveTo(xStart, ventricleLineY);
+    ctx.lineTo(xStart, ctx.canvas.height);
+    ctx.stroke();
+
+    // End line
+    ctx.beginPath();
+    ctx.moveTo(xEnd, ventricleLineY);
+    ctx.lineTo(xEnd, ctx.canvas.height);
+    ctx.stroke();
+  });
 }
         
         function parseECGXML(xmlText) {
