@@ -543,7 +543,7 @@ function detectPWaves(signal, qrsRegions) {
   const amplitudeRange = Math.max(...signal) - Math.min(...signal);
 
   // How far before QRS we look (in samples)
-  const searchWindow = 80;  // tune for your sampling rate (~150ms)
+  const searchWindow = 160;  // tune for your sampling rate (~300ms)
   const minWidth = 10;
   const threshold = amplitudeRange * 0.05; // smaller threshold than QRS
 
