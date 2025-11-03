@@ -486,6 +486,7 @@
 
     // ---- P-WAVES DRAW and DETECTION ----
     const pRegions = detectPWaves(leadData, qrsRegions);
+    console.log("Detected P regions:", pRegions);
     drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX);
 }
 function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) {
@@ -540,28 +541,27 @@ function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) 
 
 function detectPWaves(signal, qrsRegions) {
   const pRegions = [];
-  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
+  if (!qrsRegions || qrsRegions.length === 0) return pRegions;
 
-  // How far before QRS we look (in samples)
-  const searchWindow = 160;  // tune for your sampling rate (~300ms)
-  const minWidth = 10;
-  const threshold = amplitudeRange * 0.05; // smaller threshold than QRS
+  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
+  const searchWindow = 180; // ~300 ms before QRS (tuneable)
+  const minWidth = 5;
+  const threshold = amplitudeRange * 0.01; // very sensitive (1% of amplitude)
 
   qrsRegions.forEach(qrs => {
     const endSearch = Math.max(0, qrs.start - 5);
     const startSearch = Math.max(0, qrs.start - searchWindow);
-
-    let segment = signal.slice(startSearch, endSearch);
+    const segment = signal.slice(startSearch, endSearch);
 
     if (segment.length < 5) return;
 
-    // Compute derivative magnitude
+    // Compute simple slope magnitude
     const derivative = [];
     for (let i = 1; i < segment.length; i++) {
       derivative.push(Math.abs(segment[i] - segment[i - 1]));
     }
 
-    // Find contiguous region above threshold
+    // Find small sustained area above threshold
     let inP = false;
     let start = 0;
     for (let i = 0; i < derivative.length; i++) {
