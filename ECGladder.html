@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v3</title>
+    <title>ECG Ladder Diagram v3.1</title>
     <style>
         * {
             margin: 0;
@@ -486,7 +486,7 @@
     // ---- DRAW QRS MARKERS ----
     drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
 }
-function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10) {
+function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) {
   if (!signal || signal.length < 2) return [];
 
   // Compute derivative magnitude
@@ -495,24 +495,45 @@ function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10) {
     derivative.push(Math.abs(signal[i] - signal[i - 1]));
   }
 
-  // Compute adaptive threshold based on signal amplitude range
+  // Adaptive threshold based on amplitude range
   const amplitudeRange = Math.max(...signal) - Math.min(...signal);
-  const adaptiveThreshold = thresholdFactor * (amplitudeRange * 0.1); // 10% of amplitude range scaled by sensitivity factor
+  const adaptiveThreshold = thresholdFactor * (amplitudeRange * 0.1);
+  const hysteresis = adaptiveThreshold * 0.5; // 50% lower threshold to exit QRS
 
-  const qrsRegions = [];
+  const rawRegions = [];
   let inQRS = false;
   let start = 0;
 
   for (let i = 0; i < derivative.length; i++) {
-    if (derivative[i] > adaptiveThreshold && !inQRS) {
+    if (!inQRS && derivative[i] > adaptiveThreshold) {
       inQRS = true;
       start = i;
-    } else if (derivative[i] <= adaptiveThreshold && inQRS) {
+    } else if (inQRS && derivative[i] < hysteresis) {
       inQRS = false;
-      if (i - start >= minWidth) qrsRegions.push({ start, end: i });
+      if (i - start >= minWidth) {
+        rawRegions.push({ start, end: i });
+      }
     }
   }
-  return qrsRegions;
+
+  // Merge regions that are very close (handle multi-line detection)
+  const mergedRegions = [];
+  if (rawRegions.length > 0) {
+    let current = rawRegions[0];
+    for (let i = 1; i < rawRegions.length; i++) {
+      const next = rawRegions[i];
+      if (next.start - current.end < mergeGap) {
+        // Merge overlapping or close regions
+        current.end = next.end;
+      } else {
+        mergedRegions.push(current);
+        current = next;
+      }
+    }
+    mergedRegions.push(current);
+  }
+
+  return mergedRegions;
 }
 
 function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
