@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram</title>
+    <title>ECG Ladder Diagram v1</title>
     <style>
         * {
             margin: 0;
@@ -838,4 +838,169 @@
             
             // Handle symbol dragging
             if (draggingSymbol !== null) {
-                const
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    const line = lines[endpoint.lineIndex];
+                    const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+                    
+                    symbols[draggingSymbol].x = endpoint.x;
+                    symbols[draggingSymbol].y = endpoint.y;
+                    symbols[draggingSymbol].lineAngle = lineAngle;
+                    symbols[draggingSymbol].lineIndex = endpoint.lineIndex;
+                    symbols[draggingSymbol].endpoint = endpoint.endpoint;
+                    redrawCanvas();
+                }
+                return;
+            }
+            
+            // Handle hover detection when in adjust mode
+            if (currentTool === 'adjust') {
+                const endpoint = findEndpointAtPosition(x, y);
+                const symbolIndex = findSymbolAtPosition(x, y);
+                
+                if (endpoint || symbolIndex !== null) {
+                    hoveredEndpoint = endpoint;
+                    hoveredSymbol = symbolIndex;
+                    canvas.style.cursor = 'pointer';
+                    showHelperLine = false;
+                    redrawCanvas();
+                } else if (hoveredEndpoint || hoveredSymbol !== null) {
+                    hoveredEndpoint = null;
+                    hoveredSymbol = null;
+                    canvas.style.cursor = 'default';
+                    showHelperLine = true;
+                    redrawCanvas();
+                } else {
+                    showHelperLine = true;
+                    redrawCanvas();
+                }
+                return;
+            }
+            
+            // Handle hover in dot mode
+            if (currentTool === 'dot') {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    canvas.style.cursor = 'pointer';
+                    showHelperLine = false;
+                } else {
+                    canvas.style.cursor = 'crosshair';
+                    showHelperLine = true;
+                }
+                redrawCanvas();
+                return;
+            }
+            
+            // Show helper line for other tools
+            if (currentTool === 'line' || currentTool === 'eraser') {
+                showHelperLine = true;
+            }
+            
+            if (!isDrawing) {
+                redrawCanvas();
+                return;
+            }
+            
+            if (currentTool === 'line') {
+                const snappedY = snapToLine(y);
+                
+                // Restore canvas from temp
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+                
+                // Draw preview line
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = currentLineWidth;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(tempStartX, tempStartY);
+                ctx.lineTo(x, snappedY);
+                ctx.stroke();
+                
+                // Draw arrow if endpoint is at bottom edge
+                if (snappedY === canvas.height) {
+                    drawArrowhead(tempStartX, tempStartY, x, snappedY, currentColor, currentLineWidth);
+                }
+                
+                // Draw helper line
+                if (showHelperLine) {
+                    ctx.strokeStyle = '#2196F3';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(mouseX, 0);
+                    ctx.lineTo(mouseX, canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            } else if (currentTool === 'eraser') {
+                ctx.clearRect(x - 10, y - 10, 20, 20);
+                // Redraw grid lines in erased area
+                if (Math.abs(y - (atriaStart + atriaHeight)) < 10 || Math.abs(y - ventricleLine) < 10) {
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    const lineY = Math.abs(y - (atriaStart + atriaHeight)) < 10 ? (atriaStart + atriaHeight) : ventricleLine;
+                    ctx.moveTo(x - 10, lineY);
+                    ctx.lineTo(x + 10, lineY);
+                    ctx.stroke();
+                }
+                startX = x;
+                startY = y;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', function(e) {
+            if (draggingEndpoint) {
+                draggingEndpoint = null;
+                saveState();
+                return;
+            }
+            
+            if (draggingSymbol !== null) {
+                draggingSymbol = null;
+                saveState();
+                return;
+            }
+            
+            if (isDrawing && currentTool === 'line') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const snappedY = snapToLine(y);
+                
+                // Add line to array
+                lines.push({
+                    x1: tempStartX,
+                    y1: tempStartY,
+                    x2: x,
+                    y2: snappedY,
+                    color: currentColor,
+                    width: currentLineWidth
+                });
+                
+                redrawCanvas();
+                saveState();
+            }
+            
+            if (isDrawing) {
+                isDrawing = false;
+                if (currentTool === 'eraser') {
+                    saveState();
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseenter', function() {
+            showHelperLine = true;
+        });
+        
+        canvas.addEventListener('mouseleave', function() {
+            isDrawing = false;
+            showHelperLine = false;
+            redrawCanvas();
+        });
+    </script>
+</body>
+</html>
