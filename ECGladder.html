@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v2</title>
+    <title>ECG Ladder Diagram v3</title>
     <style>
         * {
             margin: 0;
@@ -486,26 +486,33 @@
     // ---- DRAW QRS MARKERS ----
     drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
 }
-function detectQRS(signal, thresholdSlope = 0.5, minWidth = 10) {
-    const derivative = [];
-    for (let i = 1; i < signal.length; i++) {
-        derivative.push(Math.abs(signal[i] - signal[i - 1]));
-    }
+function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10) {
+  if (!signal || signal.length < 2) return [];
 
-    const qrsRegions = [];
-    let inQRS = false;
-    let start = 0;
+  // Compute derivative magnitude
+  const derivative = [];
+  for (let i = 1; i < signal.length; i++) {
+    derivative.push(Math.abs(signal[i] - signal[i - 1]));
+  }
 
-    for (let i = 0; i < derivative.length; i++) {
-        if (derivative[i] > thresholdSlope && !inQRS) {
-            inQRS = true;
-            start = i;
-        } else if (derivative[i] <= thresholdSlope && inQRS) {
-            inQRS = false;
-            if (i - start >= minWidth) qrsRegions.push({ start, end: i });
-        }
+  // Compute adaptive threshold based on signal amplitude range
+  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
+  const adaptiveThreshold = thresholdFactor * (amplitudeRange * 0.1); // 10% of amplitude range scaled by sensitivity factor
+
+  const qrsRegions = [];
+  let inQRS = false;
+  let start = 0;
+
+  for (let i = 0; i < derivative.length; i++) {
+    if (derivative[i] > adaptiveThreshold && !inQRS) {
+      inQRS = true;
+      start = i;
+    } else if (derivative[i] <= adaptiveThreshold && inQRS) {
+      inQRS = false;
+      if (i - start >= minWidth) qrsRegions.push({ start, end: i });
     }
-    return qrsRegions;
+  }
+  return qrsRegions;
 }
 
 function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
