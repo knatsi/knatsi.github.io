@@ -1,698 +1,841 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ECG Ladder Diagram</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial, sans-serif;background:#f5f5f5;padding:20px}
-    .container{max-width:1400px;margin:0 auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
-    h1{margin-bottom:20px;color:#333}
-    .toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;padding:12px;background:#f8f8f8;border-radius:6px;align-items:center}
-    button{padding:8px 12px;border:0;border-radius:6px;background:#4CAF50;color:#fff;cursor:pointer;font-size:14px}
-    button:hover{filter:brightness(.95)}
-    button.active{background:#2196F3}
-    button.clear{background:#f44336}
-    button.clear:hover{filter:brightness(.92)}
-    .canvas-container{border:2px solid #ddd;background:#fff;overflow:auto;position:relative;height:450px}
-    canvas{display:block;cursor:crosshair;width:100%;height:100%}
-    .info{margin-top:12px;padding:10px;background:#e3f2fd;border-radius:4px;font-size:14px;color:#1976d2}
-    .color-picker{display:flex;align-items:center;gap:8px}
-    input[type=color]{width:44px;height:36px;border:none;border-radius:4px;cursor:pointer}
-    input[type=number]{width:80px;padding:8px;border:1px solid #ddd;border-radius:4px}
-    label{font-size:14px;color:#555}
-    select{padding:6px;border-radius:6px;border:1px solid #ddd}
-    .small{font-size:13px;padding:6px 8px}
-    .right{margin-left:auto}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Ladder Diagram</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.active {
+            background: #2196F3;
+        }
+        
+        button.clear {
+            background: #f44336;
+        }
+        
+        button.clear:hover {
+            background: #da190b;
+        }
+        
+        .canvas-container {
+            border: 2px solid #ddd;
+            background: white;
+            overflow: auto;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        label {
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>ECG Ladder Diagram Drawing Tool</h1>
-
-    <div class="toolbar" id="mainToolbar">
-      <button id="drawLine" class="active small">Draw Line (L)</button>
-      <button id="adjust" class="small">Adjust (A)</button>
-      <button id="drawDot" class="small">Draw Symbol (D)</button>
-      <button id="eraser" class="small">Eraser (E)</button>
-
-      <div class="color-picker">
-        <label>Symbol:</label>
-        <select id="symbolType" class="small">
-          <option value="dot">● Dot</option>
-          <option value="arrow">→ Arrow</option>
-          <option value="singleLine">⊥ Single Line</option>
-          <option value="doubleLine">⊥⊥ Double Line</option>
-        </select>
-      </div>
-
-      <div class="color-picker">
-        <label>Color:</label>
-        <input type="color" id="colorPicker" value="#000000">
-      </div>
-
-      <div class="color-picker">
-        <label>Line Width:</label>
-        <input type="number" id="lineWidth" min="1" max="10" value="2">
-      </div>
-
-      <button id="undo" class="small">Undo (Z)</button>
-      <button id="redo" class="small">Redo (Y)</button>
-      <button id="clear" class="clear small">Clear All (C)</button>
-
-      <div style="width:1px;height:1px" aria-hidden="true"></div>
-
-      <div class="right" style="display:flex;gap:8px;align-items:center">
-        <div class="color-picker">
-          <label>Load ECG XML:</label>
-          <input type="file" id="ecgFile" accept=".xml" class="small">
+    <div class="container">
+        <h1>ECG Ladder Diagram Drawing Tool</h1>
+        
+        <div class="toolbar">
+            <button id="drawLine" class="active">Draw Line</button>
+            <button id="adjust">Adjust</button>
+            <button id="drawDot">Draw Symbol</button>
+            <button id="eraser">Eraser</button>
+            
+            <div class="color-picker">
+                <label>Symbol:</label>
+                <select id="symbolType">
+                    <option value="dot">● Dot</option>
+                    <option value="arrow">→ Arrow</option>
+                    <option value="singleLine">⊥ Single Line</option>
+                    <option value="doubleLine">⊥⊥ Double Line</option>
+                </select>
+            </div>
+            
+            <div class="color-picker">
+                <label>Color:</label>
+                <input type="color" id="colorPicker" value="#000000">
+            </div>
+            
+            <div class="color-picker">
+                <label>Line Width:</label>
+                <input type="number" id="lineWidth" min="1" max="10" value="2">
+            </div>
+            
+            <button id="undo">Undo</button>
+            <button id="clear" class="clear">Clear All</button>
         </div>
-
-        <div class="color-picker" id="leadSelector" style="display:none">
-          <label>Select Lead:</label>
-          <select id="leadDropdown" class="small"></select>
+        
+        <div class="toolbar">
+            <div class="color-picker">
+                <label>Load ECG XML:</label>
+                <input type="file" id="ecgFile" accept=".xml">
+            </div>
+            
+            <div class="color-picker" id="leadSelector" style="display: none;">
+                <label>Select Lead:</label>
+                <select id="leadDropdown"></select>
+            </div>
         </div>
-
-        <input type="file" id="importAnnotations" accept=".json" style="display:none">
-        <button id="exportPng" class="small">Export PNG</button>
-        <button id="exportAnnotations" class="small">Export Annotations</button>
-        <button id="importAnnotationsBtn" class="small">Import Annotations</button>
-      </div>
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="1200" height="450"></canvas>
+        </div>
+        
+        <div class="info">
+            <strong>Instructions:</strong> Click and drag to draw. The ladder shows three chambers: Atria (A), AV Node (AV), and Ventricles (V). Use different tools to create your ECG ladder diagram showing electrical conduction paths.
+        </div>
     </div>
 
-    <div class="canvas-container" id="canvasWrap">
-      <canvas id="canvas" width="1200" height="450"></canvas>
-    </div>
-
-    <div class="info">
-      <strong>Instructions:</strong> Click/touch-drag to draw. Ladder shows three chambers: Atria (A), AV Node (AV), Ventricles (V). Tools: L=line, D=symbol, A=adjust, E=eraser. Use undo/redo or export PNG / annotations.
-    </div>
-  </div>
-
-  <script>
-    // --- Globals & Canvas ---
-    const container = document.getElementById('canvasWrap');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-
-    // Keep a backing buffer sized to the canvas pixel dimensions for crispness
-    function resizeCanvasToDisplaySize() {
-      const rect = container.getBoundingClientRect();
-      // choose a target pixel size while preserving aspect ratio (use rect height)
-      const width = Math.max(600, Math.floor(rect.width));
-      const height = Math.max(300, Math.floor(rect.height));
-      // set canvas logical size to match CSS size * devicePixelRatio for sharpness
-      const dpr = window.devicePixelRatio || 1;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // scale drawing ops
-      recomputeLadderGeometry();
-      redrawCanvas();
-    }
-
-    window.addEventListener('resize', debounce(resizeCanvasToDisplaySize, 120));
-    // initial resize
-    resizeCanvasToDisplaySize();
-
-    // --- State ---
-    let isDrawing = false;
-    let currentTool = 'line';
-    let currentColor = '#000000';
-    let currentLineWidth = 2;
-    let currentSymbol = 'dot';
-    let startX=0,startY=0,tempStartX=0,tempStartY=0;
-    let history = [], future = [];
-    let tempCanvas = document.createElement('canvas'), tempCtx = tempCanvas.getContext('2d');
-    let lines = [], symbols = [];
-    let hoveredEndpoint = null, draggingEndpoint = null, hoveredSymbol = null, draggingSymbol = null;
-    let ecgData = null, ecgLeads = [], currentLead = null;
-    let ecgHeight = 150;
-    let mouseX = -1, showHelperLine = false;
-
-    // Ladder geometry (will be recomputed when canvas/resized)
-    let atriaStart = ecgHeight, ladderHeight=0, atriaHeight=0, avHeight=0, ventricleLine=0, ventricleHeight=0, snapLines=[];
-
-    function recomputeLadderGeometry(){
-      // ecgHeight remains a visual height; ensure it does not exceed canvas
-      const cssH = parseInt(getComputedStyle(container).height) || 450;
-      ecgHeight = Math.min(180, Math.round(cssH * 0.33));
-      atriaStart = ecgHeight;
-      ladderHeight = canvas.height/ (window.devicePixelRatio || 1) - ecgHeight;
-      atriaHeight = ladderHeight * 0.25;
-      avHeight = ladderHeight * 0.5;
-      ventricleHeight = ladderHeight * 0.25;
-      ventricleLine = atriaStart + atriaHeight + avHeight;
-
-      const halfStepA = atriaHeight / 4, halfStepAV = avHeight / 4, halfStepV = ventricleHeight / 4;
-      snapLines = [
-        atriaStart,
-        atriaStart + halfStepA,
-        atriaStart + atriaHeight / 2,
-        atriaStart + atriaHeight - halfStepA,
-        atriaStart + atriaHeight,
-        atriaStart + atriaHeight + halfStepAV,
-        atriaStart + atriaHeight + avHeight / 2,
-        ventricleLine - halfStepAV,
-        ventricleLine,
-        ventricleLine + halfStepV,
-        ventricleLine + ventricleHeight / 2,
-        (canvas.height / (window.devicePixelRatio || 1)) - halfStepV,
-        (canvas.height / (window.devicePixelRatio || 1))
-      ];
-      // temp canvas keep same logical size to draw previews crisply
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-    }
-
-    // Basic utils
-    function debounce(fn, t){ let timer; return (...a)=>{ clearTimeout(timer); timer = setTimeout(()=>fn(...a), t); }; }
-    function isNearPoint(x,y,px,py,threshold=8){ return Math.abs(x-px)<threshold && Math.abs(y-py)<threshold; }
-    function snapToLine(y){
-      let closest=snapLines[0], m=Math.abs(y-snapLines[0]);
-      for(const s of snapLines){ let d=Math.abs(y-s); if(d<m){m=d;closest=s;} }
-      return closest;
-    }
-
-    // Find endpoint of a line near a pointer
-    function findEndpointAtPosition(x,y){
-      for(let i=0;i<lines.length;i++){
-        const L = lines[i];
-        if(isNearPoint(x,y,L.x1,L.y1)) return {lineIndex:i, endpoint:'start', x:L.x1, y:L.y1};
-        if(isNearPoint(x,y,L.x2,L.y2)) return {lineIndex:i, endpoint:'end', x:L.x2, y:L.y2};
-      }
-      return null;
-    }
-    function findSymbolAtPosition(x,y){
-      for(let i=0;i<symbols.length;i++){
-        const s=symbols[i];
-        if(isNearPoint(x,y,s.x,s.y, s.size*2.5 + 10)) return i;
-      }
-      return null;
-    }
-
-    // Drawing helpers
-    function drawSymbol(x,y,type,color,size,lineAngle=0){
-      const radius = size*2.5;
-      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
-      switch(type){
-        case 'dot':
-          ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill(); break;
-        case 'arrow':
-          const arrowLength = 10 + size, arrowWidth = 6 + size, angle = lineAngle || 0;
-          ctx.beginPath();
-          ctx.moveTo(x,y);
-          ctx.lineTo(x - arrowLength*Math.cos(angle) - arrowWidth*Math.sin(angle), y - arrowLength*Math.sin(angle) + arrowWidth*Math.cos(angle));
-          ctx.lineTo(x - arrowLength*Math.cos(angle) + arrowWidth*Math.sin(angle), y - arrowLength*Math.sin(angle) - arrowWidth*Math.cos(angle));
-          ctx.closePath(); ctx.fill();
-          break;
-        case 'singleLine':
-          const perpAng = lineAngle + Math.PI/2, len = radius*1.5;
-          ctx.beginPath();
-          ctx.moveTo(x - len*Math.cos(perpAng), y - len*Math.sin(perpAng));
-          ctx.lineTo(x + len*Math.cos(perpAng), y + len*Math.sin(perpAng));
-          ctx.stroke();
-          break;
-        case 'doubleLine':
-          const perpA = lineAngle + Math.PI/2, len2 = radius*1.5, spacing = size*2;
-          ctx.beginPath();
-          ctx.moveTo(x - len2*Math.cos(perpA) - spacing*Math.cos(lineAngle), y - len2*Math.sin(perpA) - spacing*Math.sin(lineAngle));
-          ctx.lineTo(x + len2*Math.cos(perpA) - spacing*Math.cos(lineAngle), y + len2*Math.sin(perpA) - spacing*Math.sin(lineAngle));
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(x - len2*Math.cos(perpA) + spacing*Math.cos(lineAngle), y - len2*Math.sin(perpA) + spacing*Math.sin(lineAngle));
-          ctx.lineTo(x + len2*Math.cos(perpA) + spacing*Math.cos(lineAngle), y + len2*Math.sin(perpA) + spacing*Math.sin(lineAngle));
-          ctx.stroke();
-          break;
-      }
-    }
-
-    function drawArrowhead(x1,y1,x2,y2,color,width){
-      const angle = Math.atan2(y2-y1,x2-x1); const arrowLength = 10 + width, arrowWidth = 6 + width;
-      ctx.fillStyle = color; ctx.beginPath();
-      ctx.moveTo(x2,y2);
-      ctx.lineTo(x2 - arrowLength*Math.cos(angle) - arrowWidth*Math.sin(angle), y2 - arrowLength*Math.sin(angle) + arrowWidth*Math.cos(angle));
-      ctx.lineTo(x2 - arrowLength*Math.cos(angle) + arrowWidth*Math.sin(angle), y2 - arrowLength*Math.sin(angle) - arrowWidth*Math.cos(angle));
-      ctx.closePath(); ctx.fill();
-    }
-
-    // Draw ECG trace if present
-    function drawECG(){
-      if(!currentLead || !ecgData) return;
-      const leadData = ecgData[currentLead]; if(!leadData || leadData.length===0) return;
-      const padding = 10;
-      const drawWidth = (canvas.width/ (window.devicePixelRatio||1)) - padding*2;
-      const drawHeight = ecgHeight - 40;
-      const yOffset = 30;
-      const min = Math.min(...leadData), max = Math.max(...leadData); const range = max - min;
-      if(range===0) return;
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.beginPath();
-      leadData.forEach((value,index)=>{
-        const x = padding + (index / leadData.length) * drawWidth;
-        const y = yOffset + drawHeight - ((value - min)/range)*drawHeight;
-        if(index===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-      });
-      ctx.stroke();
-    }
-
-    // Draw the ladder grid and all content
-    function drawGrid(){
-      // clear
-      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1));
-
-      // ECG area
-      ctx.fillStyle = '#f0f0f0'; ctx.fillRect(0,0,canvas.width/(window.devicePixelRatio||1), ecgHeight);
-      ctx.fillStyle = '#333'; ctx.font = 'bold 16px Arial'; ctx.textBaseline='top';
-      ctx.fillText('ECG', 10, 10);
-
-      // Draw ECG if available
-      if(currentLead && ecgData) drawECG();
-
-      // ECG bottom border
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.beginPath();
-      ctx.moveTo(0, ecgHeight); ctx.lineTo(canvas.width/(window.devicePixelRatio||1), ecgHeight); ctx.stroke();
-
-      // Horizontal chamber borders
-      ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(0, atriaStart + atriaHeight); ctx.lineTo(canvas.width/(window.devicePixelRatio||1), atriaStart + atriaHeight); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, ventricleLine); ctx.lineTo(canvas.width/(window.devicePixelRatio||1), ventricleLine); ctx.stroke();
-
-      // Vertical grid lines
-      ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
-      const width = canvas.width/(window.devicePixelRatio||1);
-      for(let x=40; x<width; x+=40){ ctx.beginPath(); ctx.moveTo(x, ecgHeight); ctx.lineTo(x, canvas.height/(window.devicePixelRatio||1)); ctx.stroke(); }
-
-      // Labels
-      ctx.fillStyle = '#333'; ctx.font = 'bold 20px Arial'; ctx.textBaseline = 'middle';
-      ctx.fillText('A (Atria)', 10, atriaStart + atriaHeight/2);
-      ctx.fillText('AV (AV Node)', 10, atriaStart + atriaHeight + avHeight/2);
-      ctx.fillText('V (Ventricles)', 10, ventricleLine + ventricleHeight/2);
-    }
-
-    function redrawCanvas(){
-      // Save current context transform
-      drawGrid();
-
-      // Draw all lines
-      lines.forEach((line)=>{
-        ctx.strokeStyle = line.color; ctx.lineWidth = line.width; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(line.x1, line.y1); ctx.lineTo(line.x2, line.y2); ctx.stroke();
-        if(line.y2 === canvas.height/(window.devicePixelRatio||1) || Math.abs(line.y2 - (canvas.height/(window.devicePixelRatio||1))) < 0.0001){
-          drawArrowhead(line.x1, line.y1, line.x2, line.y2, line.color, line.width);
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isDrawing = false;
+        let currentTool = 'line';
+        let currentColor = '#000000';
+        let currentLineWidth = 2;
+        let currentSymbol = 'dot';
+        let startX, startY;
+        let tempStartX, tempStartY;
+        let history = [];
+        let tempCanvas = document.createElement('canvas');
+        let tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        
+        // Store all drawn lines and symbols
+        let lines = [];
+        let symbols = [];
+        let hoveredEndpoint = null;
+        let draggingEndpoint = null;
+        let hoveredSymbol = null;
+        let draggingSymbol = null;
+        
+        // ECG data
+        let ecgData = null;
+        let ecgLeads = [];
+        let currentLead = null;
+        let ecgHeight = 150;
+        
+        // Helper line
+        let mouseX = -1;
+        let showHelperLine = false;
+        
+        const atriaStart = ecgHeight;
+        const ladderHeight = canvas.height - ecgHeight;
+        const atriaHeight = ladderHeight * 0.25;
+        const avHeight = ladderHeight * 0.5;
+        const ventricleLine = atriaStart + atriaHeight + avHeight;
+        const ventricleHeight = ladderHeight * 0.25;
+        
+        const halfStepA = atriaHeight / 4;
+        const halfStepAV = avHeight / 4;
+        const halfStepV = ventricleHeight / 4;
+        
+        const snapLines = [
+            atriaStart,                                          // Top of ladder (bottom of ECG)
+            atriaStart + halfStepA,                             // Half step below top (in A)
+            atriaStart + atriaHeight / 2,                       // A center
+            atriaStart + atriaHeight - halfStepA,               // Half between A and AV
+            atriaStart + atriaHeight,                           // A/AV border line
+            atriaStart + atriaHeight + halfStepAV,              // Half between A and AV (in AV)
+            atriaStart + atriaHeight + avHeight / 2,            // AV center
+            ventricleLine - halfStepAV,                         // Half between AV and V (in AV)
+            ventricleLine,                                      // AV/V border line
+            ventricleLine + halfStepV,                          // Half between AV and V (in V)
+            ventricleLine + ventricleHeight / 2,                // V center
+            canvas.height - halfStepV,                          // Half step above bottom (in V)
+            canvas.height                                       // Bottom edge
+        ];
+        
+        function snapToLine(y) {
+            let closest = snapLines[0];
+            let minDist = Math.abs(y - snapLines[0]);
+            
+            for (let line of snapLines) {
+                let dist = Math.abs(y - line);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = line;
+                }
+            }
+            
+            return closest;
         }
-      });
-
-      // Symbols
-      symbols.forEach(s => drawSymbol(s.x, s.y, s.type, s.color, s.size, s.lineAngle));
-
-      // Hover endpoints
-      if(hoveredEndpoint && !draggingEndpoint && currentTool === 'adjust'){
-        const ln = lines[hoveredEndpoint.lineIndex];
-        const x = hoveredEndpoint.endpoint === 'start' ? ln.x1 : ln.x2;
-        const y = hoveredEndpoint.endpoint === 'start' ? ln.y1 : ln.y2;
-        ctx.fillStyle = '#2196F3'; ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
-      }
-
-      if(hoveredSymbol !== null && !draggingSymbol && currentTool === 'adjust'){
-        const s = symbols[hoveredSymbol]; ctx.strokeStyle = '#2196F3'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(s.x,s.y,s.size*2.5 + 3,0,Math.PI*2); ctx.stroke();
-      }
-
-      // helper vertical guide
-      if(showHelperLine && mouseX >= 0){
-        ctx.strokeStyle = '#2196F3'; ctx.lineWidth = 1; ctx.setLineDash([5,5]);
-        ctx.beginPath(); ctx.moveTo(mouseX,0); ctx.lineTo(mouseX, canvas.height/(window.devicePixelRatio||1)); ctx.stroke(); ctx.setLineDash([]);
-      }
-    }
-
-    // History
-    function saveState(){
-      // store shallow serializable state (deep copy)
-      const state = {
-        lines: JSON.parse(JSON.stringify(lines)),
-        symbols: JSON.parse(JSON.stringify(symbols))
-      };
-      history.push(state);
-      // cap
-      if(history.length > 40) history.shift();
-      // clear future on new action
-      future = [];
-    }
-
-    function restoreState(state){
-      if(!state) return;
-      lines = JSON.parse(JSON.stringify(state.lines));
-      symbols = JSON.parse(JSON.stringify(state.symbols));
-      redrawCanvas();
-    }
-
-    // --- Tool buttons & UI wiring ---
-    document.getElementById('drawLine').addEventListener('click', ()=>setTool('line'));
-    document.getElementById('adjust').addEventListener('click', ()=>setTool('adjust'));
-    document.getElementById('drawDot').addEventListener('click', ()=>setTool('dot'));
-    document.getElementById('eraser').addEventListener('click', ()=>setTool('eraser'));
-    document.getElementById('symbolType').addEventListener('change', e=>currentSymbol=e.target.value);
-    document.getElementById('colorPicker').addEventListener('change', e=>currentColor=e.target.value);
-    document.getElementById('lineWidth').addEventListener('change', e=>currentLineWidth=parseInt(e.target.value) || 2);
-
-    document.getElementById('undo').addEventListener('click', ()=>{ if(history.length>1){ future.push(history.pop()); restoreState(history[history.length-1]); } else if(history.length===1){ history.pop(); lines=[]; symbols=[]; redrawCanvas(); }});
-    document.getElementById('redo').addEventListener('click', ()=>{ if(future.length){ const s = future.pop(); history.push(s); restoreState(s); } });
-
-    document.getElementById('clear').addEventListener('click', ()=>{ lines=[]; symbols=[]; saveState(); redrawCanvas(); });
-
-    function setTool(tool){
-      currentTool = tool;
-      document.querySelectorAll('#mainToolbar button').forEach(b=>b.classList.remove('active'));
-      // mark proper control active (buttons only)
-      const btnMap = {line:'drawLine', adjust:'adjust', dot:'drawDot', eraser:'eraser'};
-      document.getElementById(btnMap[tool]).classList.add('active');
-      canvas.style.cursor = (tool==='adjust') ? 'default' : 'crosshair';
-      hoveredEndpoint = hoveredSymbol = null;
-      redrawCanvas();
-    }
-
-    // keyboard shortcuts
-    window.addEventListener('keydown', (e)=>{
-      if(e.key === 'l' || e.key === 'L') setTool('line');
-      if(e.key === 'd' || e.key === 'D') setTool('dot');
-      if(e.key === 'a' || e.key === 'A') setTool('adjust');
-      if(e.key === 'e' || e.key === 'E') setTool('eraser');
-      if((e.ctrlKey || e.metaKey) && (e.key==='z' || e.key==='Z')) { document.getElementById('undo').click(); e.preventDefault();}
-      if((e.ctrlKey || e.metaKey) && (e.key==='y' || e.key==='Y')) { document.getElementById('redo').click(); e.preventDefault();}
-    });
-
-    // --- Mouse & touch interactions ---
-    function clientToCanvas(e){
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      return {x, y};
-    }
-
-    canvas.addEventListener('mousedown', pointerDown);
-    canvas.addEventListener('touchstart', pointerDown, {passive:false});
-    canvas.addEventListener('mousemove', pointerMove);
-    canvas.addEventListener('touchmove', pointerMove, {passive:false});
-    canvas.addEventListener('mouseup', pointerUp);
-    canvas.addEventListener('touchend', pointerUp);
-
-    function pointerDown(evt){
-      evt.preventDefault();
-      const p = clientToCanvas(evt);
-      const x = p.x, yRaw = p.y;
-      mouseX = x;
-      showHelperLine = true;
-
-      if(currentTool === 'adjust'){
-        const endpoint = findEndpointAtPosition(x,yRaw);
-        if(endpoint){ draggingEndpoint = endpoint; return; }
-        const symbolIndex = findSymbolAtPosition(x,yRaw);
-        if(symbolIndex !== null){ draggingSymbol = symbolIndex; return; }
-        return;
-      }
-
-      if(currentTool === 'line'){
-        isDrawing = true;
-        startX = x; startY = snapToLine(yRaw);
-        tempStartX = startX; tempStartY = startY;
-        // copy current canvas to temp
-        tempCtx.clearRect(0,0,tempCanvas.width,tempCanvas.height);
-        // we need to draw current canvas content to temp in pixel coordinates
-        const img = new Image();
-        img.src = canvas.toDataURL();
-        img.onload = ()=> tempCtx.drawImage(img,0,0);
-      } else if(currentTool === 'dot'){
-        const endpoint = findEndpointAtPosition(x,yRaw);
-        if(endpoint){
-          const line = lines[endpoint.lineIndex];
-          const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
-          symbols.push({
-            x: endpoint.x, y: endpoint.y, type: currentSymbol, color: currentColor,
-            size: currentLineWidth, lineAngle: lineAngle, lineIndex: endpoint.lineIndex, endpoint: endpoint.endpoint
-          });
-          saveState(); redrawCanvas();
+        
+        function isNearPoint(x, y, px, py, threshold = 8) {
+            return Math.abs(x - px) < threshold && Math.abs(y - py) < threshold;
         }
-      } else if(currentTool === 'eraser'){
-        isDrawing = true; startX = x; startY = yRaw;
-        // small immediate erase region for responsiveness
-        eraseAt(x,yRaw, 12);
-      }
-    }
-
-    function pointerMove(evt){
-      evt.preventDefault();
-      const p = clientToCanvas(evt);
-      const x = p.x, yRaw = p.y;
-      mouseX = x;
-
-      // dragging endpoint
-      if(draggingEndpoint){
-        const L = lines[draggingEndpoint.lineIndex];
-        const snappedY = snapToLine(yRaw);
-        if(draggingEndpoint.endpoint === 'start'){ L.x1 = x; L.y1 = snappedY; }
-        else { L.x2 = x; L.y2 = snappedY; }
-        // update any symbols attached to this endpoint
-        symbols.forEach(s=> {
-          if(s.lineIndex === draggingEndpoint.lineIndex && s.endpoint === draggingEndpoint.endpoint){
-            s.x = (s.endpoint==='start' ? L.x1 : L.x2);
-            s.y = (s.endpoint==='start' ? L.y1 : L.y2);
-            s.lineAngle = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
-          }
-        });
-        redrawCanvas(); return;
-      }
-
-      if(draggingSymbol !== null){
-        // snap to nearest endpoint if present
-        const endpoint = findEndpointAtPosition(x,yRaw);
-        if(endpoint){
-          const L = lines[endpoint.lineIndex];
-          const lineAngle = Math.atan2(L.y2 - L.y1, L.x2 - L.x1);
-          const s = symbols[draggingSymbol];
-          s.x = endpoint.x; s.y = endpoint.y; s.lineAngle = lineAngle; s.lineIndex = endpoint.lineIndex; s.endpoint = endpoint.endpoint;
-          redrawCanvas();
+        
+        function findEndpointAtPosition(x, y) {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (isNearPoint(x, y, line.x1, line.y1)) {
+                    return { lineIndex: i, endpoint: 'start', x: line.x1, y: line.y1 };
+                }
+                if (isNearPoint(x, y, line.x2, line.y2)) {
+                    return { lineIndex: i, endpoint: 'end', x: line.x2, y: line.y2 };
+                }
+            }
+            return null;
         }
-        return;
-      }
-
-      // hover detection in adjust mode
-      if(currentTool === 'adjust'){
-        const endpoint = findEndpointAtPosition(x,yRaw);
-        const symbolIndex = findSymbolAtPosition(x,yRaw);
-        if(endpoint || symbolIndex !== null){ hoveredEndpoint = endpoint; hoveredSymbol = symbolIndex; canvas.style.cursor='pointer'; showHelperLine=false; redrawCanvas(); }
-        else if(hoveredEndpoint || hoveredSymbol !== null){ hoveredEndpoint=null; hoveredSymbol=null; canvas.style.cursor='default'; showHelperLine=true; redrawCanvas(); }
-        else { showHelperLine=true; redrawCanvas(); }
-        return;
-      }
-
-      // dot mode hover
-      if(currentTool === 'dot'){
-        const endpoint = findEndpointAtPosition(x,yRaw);
-        if(endpoint){ canvas.style.cursor='pointer'; showHelperLine=false; } else { canvas.style.cursor='crosshair'; showHelperLine=true;}
-        redrawCanvas(); return;
-      }
-
-      // line / eraser preview
-      if(currentTool === 'line' && isDrawing){
-        const snappedY = snapToLine(yRaw);
-        // paint preview by restoring temp and drawing overlay
-        ctx.clearRect(0,0, canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1));
-        // draw temp image from tempCtx onto main ctx
-        const img = new Image(); img.src = tempCanvas.toDataURL(); img.onload = ()=>{
-          ctx.drawImage(img,0,0, canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1));
-          ctx.strokeStyle = currentColor; ctx.lineWidth = currentLineWidth; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(tempStartX,tempStartY); ctx.lineTo(x, snappedY); ctx.stroke();
-          if(snappedY === canvas.height/(window.devicePixelRatio||1)) drawArrowhead(tempStartX,tempStartY,x,snappedY,currentColor,currentLineWidth);
-          // helper vertical
-          if(showHelperLine && mouseX>=0){ ctx.strokeStyle='#2196F3'; ctx.lineWidth=1; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.moveTo(mouseX,0); ctx.lineTo(mouseX,canvas.height/(window.devicePixelRatio||1)); ctx.stroke(); ctx.setLineDash([]); }
-        };
-        return;
-      } else if(currentTool === 'eraser' && isDrawing){
-        eraseAt(x,yRaw, 12);
-        return;
-      }
-
-      // update helper line if idle
-      showHelperLine = true; redrawCanvas();
-    }
-
-    function pointerUp(evt){
-      evt && evt.preventDefault();
-      if(draggingEndpoint){ draggingEndpoint = null; saveState(); return; }
-      if(draggingSymbol !== null){ draggingSymbol = null; saveState(); return; }
-
-      if(isDrawing && currentTool === 'line'){
-        const rect = canvas.getBoundingClientRect();
-        // last pointer location is in event changed touches/last mouse; just use mouseX and current pointer y estimation
-        const x = mouseX;
-        // try to get y from pointer
-        let y = (evt && (evt.changedTouches ? evt.changedTouches[0].clientY : evt.clientY)) || 0;
-        const canvasRect = canvas.getBoundingClientRect();
-        const yLocal = y ? (y - canvasRect.top) : (tempStartY || ecgHeight);
-        const snappedY = snapToLine(yLocal || tempStartY);
-
-        lines.push({ x1: tempStartX, y1: tempStartY, x2: x, y2: snappedY, color: currentColor, width: currentLineWidth });
-        saveState(); redrawCanvas();
-      }
-
-      if(isDrawing && currentTool === 'eraser'){
+        
+        function findSymbolAtPosition(x, y) {
+            for (let i = 0; i < symbols.length; i++) {
+                const symbol = symbols[i];
+                if (isNearPoint(x, y, symbol.x, symbol.y, 10)) {
+                    return i;
+                }
+            }
+            return null;
+        }
+        
+        function drawSymbol(x, y, type, color, size, lineAngle = 0) {
+            const radius = size * 2.5;
+            
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            
+            switch(type) {
+                case 'dot':
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 'arrow':
+                    const arrowLength = 10 + size;
+                    const arrowWidth = 6 + size;
+                    const angle = lineAngle || 0;
+                    
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(
+                        x - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle),
+                        y - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle)
+                    );
+                    ctx.lineTo(
+                        x - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle),
+                        y - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle)
+                    );
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                    
+                case 'singleLine':
+                    const perpAngle = lineAngle + Math.PI / 2;
+                    const lineLen = radius * 1.5;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen * Math.cos(perpAngle),
+                        y - lineLen * Math.sin(perpAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen * Math.cos(perpAngle),
+                        y + lineLen * Math.sin(perpAngle)
+                    );
+                    ctx.stroke();
+                    break;
+                    
+                case 'doubleLine':
+                    const perpAngle2 = lineAngle + Math.PI / 2;
+                    const lineLen2 = radius * 1.5;
+                    const spacing = size * 2;
+                    
+                    // First line
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen2 * Math.cos(perpAngle2) - spacing * Math.cos(lineAngle),
+                        y - lineLen2 * Math.sin(perpAngle2) - spacing * Math.sin(lineAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen2 * Math.cos(perpAngle2) - spacing * Math.cos(lineAngle),
+                        y + lineLen2 * Math.sin(perpAngle2) - spacing * Math.sin(lineAngle)
+                    );
+                    ctx.stroke();
+                    
+                    // Second line
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen2 * Math.cos(perpAngle2) + spacing * Math.cos(lineAngle),
+                        y - lineLen2 * Math.sin(perpAngle2) + spacing * Math.sin(lineAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen2 * Math.cos(perpAngle2) + spacing * Math.cos(lineAngle),
+                        y + lineLen2 * Math.sin(perpAngle2) + spacing * Math.sin(lineAngle)
+                    );
+                    ctx.stroke();
+                    break;
+            }
+        }
+        
+        function redrawCanvas() {
+            drawGrid();
+            
+            // Draw all lines
+            lines.forEach((line, index) => {
+                ctx.strokeStyle = line.color;
+                ctx.lineWidth = line.width;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(line.x1, line.y1);
+                ctx.lineTo(line.x2, line.y2);
+                ctx.stroke();
+                
+                // Draw arrow if endpoint is at bottom edge
+                if (line.y2 === canvas.height) {
+                    drawArrowhead(line.x1, line.y1, line.x2, line.y2, line.color, line.width);
+                }
+            });
+            
+            // Draw all symbols
+            symbols.forEach((symbol) => {
+                drawSymbol(symbol.x, symbol.y, symbol.type, symbol.color, symbol.size, symbol.lineAngle);
+            });
+            
+            // Draw hover dots for line endpoints
+            if (hoveredEndpoint && !draggingEndpoint && currentTool === 'adjust') {
+                const line = lines[hoveredEndpoint.lineIndex];
+                const x = hoveredEndpoint.endpoint === 'start' ? line.x1 : line.x2;
+                const y = hoveredEndpoint.endpoint === 'start' ? line.y1 : line.y2;
+                
+                ctx.fillStyle = '#2196F3';
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw hover indicator for symbols
+            if (hoveredSymbol !== null && !draggingSymbol && currentTool === 'adjust') {
+                const symbol = symbols[hoveredSymbol];
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(symbol.x, symbol.y, symbol.size * 2.5 + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // Draw helper line
+            if (showHelperLine && mouseX >= 0) {
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(mouseX, 0);
+                ctx.lineTo(mouseX, canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+        
+        function drawArrowhead(x1, y1, x2, y2, color, width) {
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const arrowLength = 10 + width;
+            const arrowWidth = 6 + width;
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(
+                x2 - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle),
+                y2 - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle)
+            );
+            ctx.lineTo(
+                x2 - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle),
+                y2 - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function drawECG() {
+            if (!currentLead || !ecgData) return;
+            
+            const leadData = ecgData[currentLead];
+            if (!leadData) return;
+            
+            const padding = 10;
+            const drawWidth = canvas.width - padding * 2;
+            const drawHeight = ecgHeight - 40;
+            const yOffset = 30;
+            
+            // Find min and max for scaling
+            const min = Math.min(...leadData);
+            const max = Math.max(...leadData);
+            const range = max - min;
+            
+            if (range === 0) return;
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            leadData.forEach((value, index) => {
+                const x = padding + (index / leadData.length) * drawWidth;
+                const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+        }
+        
+        function parseECGXML(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            
+            const parsedData = {};
+            const leads = [];
+            
+            // Try RestECG format (RhythmLead elements)
+            const rhythmLeads = xmlDoc.getElementsByTagName('RhythmLead');
+            
+            if (rhythmLeads.length > 0) {
+                for (let i = 0; i < rhythmLeads.length; i++) {
+                    const lead = rhythmLeads[i];
+                    const leadIdElement = lead.getElementsByTagName('LeadId')[0];
+                    const samplesElement = lead.getElementsByTagName('Samples')[0];
+                    
+                    if (leadIdElement && samplesElement) {
+                        const leadName = leadIdElement.textContent.trim();
+                        const base64Data = samplesElement.textContent.trim();
+                        
+                        try {
+                            const binaryString = atob(base64Data);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            
+                            // Parse 16-bit signed integers (little-endian)
+                            const samples = [];
+                            for (let j = 0; j < bytes.length - 1; j += 2) {
+                                const value = bytes[j] | (bytes[j + 1] << 8);
+                                samples.push(value > 32767 ? value - 65536 : value);
+                            }
+                            
+                            if (samples.length > 0) {
+                                parsedData[leadName] = samples;
+                                leads.push(leadName);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing lead', leadName, e);
+                        }
+                    }
+                }
+            } else {
+                // Try generic Waveform format
+                const waveforms = xmlDoc.getElementsByTagName('Waveform');
+                
+                for (let i = 0; i < waveforms.length; i++) {
+                    const waveform = waveforms[i];
+                    const leadElement = waveform.getElementsByTagName('LeadID')[0] || 
+                                       waveform.getElementsByTagName('lead')[0];
+                    
+                    if (!leadElement) continue;
+                    
+                    const leadName = leadElement.textContent.trim();
+                    const waveformData = waveform.getElementsByTagName('WaveformData')[0] || 
+                                        waveform.getElementsByTagName('data')[0];
+                    
+                    if (waveformData) {
+                        const base64Data = waveformData.textContent.trim();
+                        try {
+                            const binaryString = atob(base64Data);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            
+                            const samples = [];
+                            for (let j = 0; j < bytes.length - 1; j += 2) {
+                                const value = bytes[j] | (bytes[j + 1] << 8);
+                                samples.push(value > 32767 ? value - 65536 : value);
+                            }
+                            
+                            if (samples.length > 0) {
+                                parsedData[leadName] = samples;
+                                leads.push(leadName);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing lead', leadName, e);
+                        }
+                    }
+                }
+            }
+            
+            return { data: parsedData, leads: leads };
+        }
+        
+        // Draw the ladder diagram grid
+        function drawGrid() {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ECG area
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, ecgHeight);
+            
+            // ECG label
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textBaseline = 'top';
+            ctx.fillText('ECG', 10, 10);
+            
+            // Draw ECG if available
+            if (currentLead && ecgData) {
+                drawECG();
+            }
+            
+            // ECG bottom border (thicker)
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, ecgHeight);
+            ctx.lineTo(canvas.width, ecgHeight);
+            ctx.stroke();
+            
+            // Horizontal dividing lines (black and thicker)
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, atriaStart + atriaHeight);
+            ctx.lineTo(canvas.width, atriaStart + atriaHeight);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(0, ventricleLine);
+            ctx.lineTo(canvas.width, ventricleLine);
+            ctx.stroke();
+            
+            // Vertical grid lines (every 40px, but not at edges)
+            ctx.strokeStyle = '#eeeeee';
+            ctx.lineWidth = 1;
+            for (let x = 40; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, ecgHeight);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Labels - vertically centered in each chamber
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 20px Arial';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('A (Atria)', 10, atriaStart + atriaHeight / 2);
+            ctx.fillText('AV (AV Node)', 10, atriaStart + atriaHeight + avHeight / 2);
+            ctx.fillText('V (Ventricles)', 10, ventricleLine + ventricleHeight / 2);
+        }
+        
+        function saveState() {
+            history.push({
+                lines: JSON.parse(JSON.stringify(lines)),
+                symbols: JSON.parse(JSON.stringify(symbols)),
+                dataUrl: canvas.toDataURL()
+            });
+            if (history.length > 20) {
+                history.shift();
+            }
+        }
+        
+        function restoreState(state) {
+            lines = JSON.parse(JSON.stringify(state.lines));
+            symbols = JSON.parse(JSON.stringify(state.symbols));
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = state.dataUrl;
+        }
+        
+        // Initialize
+        drawGrid();
         saveState();
-      }
-
-      isDrawing = false;
-    }
-
-    // Eraser helper removes small bits of lines/symbols near point
-    function eraseAt(x,y,size=12){
-      // remove symbols within area
-      symbols = symbols.filter(s => !(Math.abs(s.x - x) < size && Math.abs(s.y - y) < size));
-      // trim line segments that intersect the area: simplest approach remove any line with an endpoint close to area
-      lines = lines.filter(l => !(isNearPoint(x,y,l.x1,l.y1,size) || isNearPoint(x,y,l.x2,l.y2,size)));
-      redrawCanvas();
-    }
-
-    // --- ECG XML parsing (robust) ---
-    function parseECGXML(xmlText){
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      const parsedData = {}; const leads = [];
-
-      // first: RhythmLead elements (common in some RestECG formats)
-      const rhythmLeads = xmlDoc.getElementsByTagName('RhythmLead');
-      if(rhythmLeads.length > 0){
-        for(let i=0;i<rhythmLeads.length;i++){
-          const lead = rhythmLeads[i];
-          const leadIdElement = lead.getElementsByTagName('LeadId')[0];
-          const samplesElement = lead.getElementsByTagName('Samples')[0] || lead.getElementsByTagName('Data')[0];
-          if(!leadIdElement || !samplesElement) continue;
-          const leadName = leadIdElement.textContent.trim();
-          const rawText = samplesElement.textContent.trim();
-          const samples = parseSamplesGuess(rawText);
-          if(samples && samples.length>0){ parsedData[leadName] = samples; leads.push(leadName); }
-        }
-      }
-
-      // fallback: generic Waveform elements
-      if(leads.length === 0){
-        const waveforms = xmlDoc.getElementsByTagName('Waveform');
-        for(let i=0;i<waveforms.length;i++){
-          const waveform = waveforms[i];
-          const leadElement = waveform.getElementsByTagName('LeadID')[0] || waveform.getElementsByTagName('lead')[0] || waveform.getElementsByTagName('Lead')[0];
-          if(!leadElement) continue;
-          const leadName = leadElement.textContent.trim();
-          const waveformData = waveform.getElementsByTagName('WaveformData')[0] || waveform.getElementsByTagName('data')[0] || waveform.getElementsByTagName('Samples')[0];
-          if(!waveformData) continue;
-          const rawText = waveformData.textContent.trim();
-          const samples = parseSamplesGuess(rawText);
-          if(samples && samples.length>0){ parsedData[leadName] = samples; leads.push(leadName); }
-        }
-      }
-
-      return { data: parsedData, leads: leads };
-    }
-
-    // Try base64 binary (16-bit little-endian) or csv/text floats as fallback
-    function parseSamplesGuess(raw){
-      if(!raw) return [];
-      const trimmed = raw.replace(/\s+/g,'').length > 0 ? raw : '';
-      // try base64 decode safe
-      try {
-        // If it looks like base64 (contains + / = or non-digit characters), attempt decode
-        if(/[+/=]/.test(raw)){
-          const binaryString = atob(raw);
-          const bytes = new Uint8Array(binaryString.length);
-          for(let i=0;i<binaryString.length;i++) bytes[i] = binaryString.charCodeAt(i);
-          const samples = [];
-          for(let j=0;j<bytes.length-1;j+=2){
-            const value = bytes[j] | (bytes[j+1] << 8);
-            samples.push(value > 32767 ? value - 65536 : value);
-          }
-          if(samples.length>0) return samples;
-        }
-      } catch(err){
-        // fall through to textual parse
-      }
-
-      // try CSV or whitespace separated numbers
-      try {
-        const parts = raw.trim().split(/[\s,;]+/).filter(Boolean);
-        const nums = parts.map(p => parseFloat(p)).filter(n => !Number.isNaN(n));
-        if(nums.length>0) return nums;
-      } catch(e){
-        // nothing
-      }
-
-      return [];
-    }
-
-    // --- ECG file input wiring ---
-    const ecgFile = document.getElementById('ecgFile');
-    const leadSelector = document.getElementById('leadSelector');
-    const leadDropdown = document.getElementById('leadDropdown');
-
-    ecgFile.addEventListener('change', (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev)=>{
-        const xmlText = ev.target.result;
-        const result = parseECGXML(xmlText);
-        if(result.leads.length > 0){
-          ecgData = result.data; ecgLeads = result.leads; currentLead = ecgLeads[0];
-          leadDropdown.innerHTML = ''; ecgLeads.forEach(lead=>{ const opt = document.createElement('option'); opt.value=lead; opt.textContent=lead; leadDropdown.appendChild(opt); });
-          leadSelector.style.display = 'flex'; redrawCanvas();
-        } else {
-          alert('No valid ECG leads found in the XML file.');
-        }
-      };
-      reader.readAsText(file);
-    });
-
-    leadDropdown.addEventListener('change', (e)=>{ currentLead = e.target.value; redrawCanvas(); });
-
-    // --- Export / Import Annotations & PNG ---
-    document.getElementById('exportPng').addEventListener('click', ()=>{
-      // render a full-size PNG with current drawing
-      const dataURL = canvas.toDataURL('image/png');
-      const a = document.createElement('a'); a.href = dataURL; a.download = 'ecg-ladder.png'; a.click();
-    });
-
-    document.getElementById('exportAnnotations').addEventListener('click', ()=>{
-      const payload = { lines, symbols, exportedAt: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'ecg-annotations.json'; a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    document.getElementById('importAnnotationsBtn').addEventListener('click', ()=> document.getElementById('importAnnotations').click());
-    document.getElementById('importAnnotations').addEventListener('change', (ev)=>{
-      const f = ev.target.files[0]; if(!f) return;
-      const r = new FileReader();
-      r.onload = (e)=>{
-        try{
-          const obj = JSON.parse(e.target.result);
-          if(obj.lines) lines = obj.lines; if(obj.symbols) symbols = obj.symbols;
-          saveState(); redrawCanvas();
-          alert('Annotations imported.');
-        }catch(err){ alert('Invalid JSON annotations file'); }
-      };
-      r.readAsText(f);
-    });
-
-    // initialize initial history
-    recomputeLadderGeometry();
-    saveState();
-
-    // initial draw
-    redrawCanvas();
-
-    // ensure redraw when restoring future states (image loads asynchronously sometimes)
-    // already handled by redrawCanvas in restoreState
-
-  </script>
-</body>
-</html>
+        
+        // Event listeners for tools
+        document.getElementById('drawLine').addEventListener('click', function() {
+            currentTool = 'line';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            hoveredEndpoint = null;
+            redrawCanvas();
+        });
+        
+        document.getElementById('adjust').addEventListener('click', function() {
+            currentTool = 'adjust';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'default';
+        });
+        
+        document.getElementById('drawDot').addEventListener('click', function() {
+            currentTool = 'dot';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            hoveredEndpoint = null;
+            hoveredSymbol = null;
+            redrawCanvas();
+        });
+        
+        document.getElementById('symbolType').addEventListener('change', function(e) {
+            currentSymbol = e.target.value;
+        });
+        
+        // ECG file loading
+        document.getElementById('ecgFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const xmlText = event.target.result;
+                const result = parseECGXML(xmlText);
+                
+                if (result.leads.length > 0) {
+                    ecgData = result.data;
+                    ecgLeads = result.leads;
+                    
+                    // Populate dropdown
+                    const dropdown = document.getElementById('leadDropdown');
+                    dropdown.innerHTML = '';
+                    ecgLeads.forEach(lead => {
+                        const option = document.createElement('option');
+                        option.value = lead;
+                        option.textContent = lead;
+                        dropdown.appendChild(option);
+                    });
+                    
+                    currentLead = ecgLeads[0];
+                    document.getElementById('leadSelector').style.display = 'flex';
+                    redrawCanvas();
+                } else {
+                    alert('No valid ECG leads found in the XML file.');
+                }
+            };
+            reader.readAsText(file);
+        });
+        
+        document.getElementById('leadDropdown').addEventListener('change', function(e) {
+            currentLead = e.target.value;
+            redrawCanvas();
+        });
+        
+        document.getElementById('eraser').addEventListener('click', function() {
+            currentTool = 'eraser';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            hoveredEndpoint = null;
+            redrawCanvas();
+        });
+        
+        document.getElementById('colorPicker').addEventListener('change', function(e) {
+            currentColor = e.target.value;
+        });
+        
+        document.getElementById('lineWidth').addEventListener('change', function(e) {
+            currentLineWidth = parseInt(e.target.value);
+        });
+        
+        document.getElementById('undo').addEventListener('click', function() {
+            if (history.length > 1) {
+                history.pop();
+                restoreState(history[history.length - 1]);
+            } else if (history.length === 1) {
+                lines = [];
+                drawGrid();
+            }
+        });
+        
+        document.getElementById('clear').addEventListener('click', function() {
+            lines = [];
+            symbols = [];
+            drawGrid();
+            history = [];
+            saveState();
+        });
+        
+        // Drawing functions
+        canvas.addEventListener('mousedown', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Check if clicking on an endpoint or symbol (only in adjust mode)
+            if (currentTool === 'adjust') {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    draggingEndpoint = endpoint;
+                    return;
+                }
+                
+                const symbolIndex = findSymbolAtPosition(x, y);
+                if (symbolIndex !== null) {
+                    draggingSymbol = symbolIndex;
+                    return;
+                }
+                return;
+            }
+            
+            if (currentTool === 'line') {
+                isDrawing = true;
+                startX = x;
+                startY = snapToLine(y);
+                tempStartX = startX;
+                tempStartY = startY;
+                
+                // Save current canvas state to temp canvas
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, 0, 0);
+            } else if (currentTool === 'dot') {
+                // Find nearest endpoint to snap to
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    // Find the line to calculate angle
+                    const line = lines[endpoint.lineIndex];
+                    const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+                    
+                    symbols.push({
+                        x: endpoint.x,
+                        y: endpoint.y,
+                        type: currentSymbol,
+                        color: currentColor,
+                        size: currentLineWidth,
+                        lineAngle: lineAngle,
+                        lineIndex: endpoint.lineIndex,
+                        endpoint: endpoint.endpoint
+                    });
+                    redrawCanvas();
+                    saveState();
+                }
+            } else if (currentTool === 'eraser') {
+                isDrawing = true;
+                startX = x;
+                startY = y;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Update helper line position
+            mouseX = x;
+            
+            // Handle endpoint dragging
+            if (draggingEndpoint) {
+                const line = lines[draggingEndpoint.lineIndex];
+                const snappedY = snapToLine(y);
+                
+                if (draggingEndpoint.endpoint === 'start') {
+                    line.x1 = x;
+                    line.y1 = snappedY;
+                } else {
+                    line.x2 = x;
+                    line.y2 = snappedY;
+                }
+                
+                redrawCanvas();
+                return;
+            }
+            
+            // Handle symbol dragging
+            if (draggingSymbol !== null) {
+                const
