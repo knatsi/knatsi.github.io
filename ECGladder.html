@@ -451,6 +451,9 @@
             const min = Math.min(...leadData);
             const max = Math.max(...leadData);
             const range = max - min;
+            const selectedLeadSignal = leads[selectedLead]; // your existing array of samples
+            const qrsRegions = detectQRS(selectedLeadSignal, 0.7, 8);
+                drawQRSMarkers(ctx, qrsRegions, ventricleLineY, scaleX);
             
             if (range === 0) return;
             
@@ -471,6 +474,49 @@
             
             ctx.stroke();
         }
+
+        function detectQRS(signal, thresholdSlope = 0.5, minWidth = 10) {
+  const derivative = [];
+  for (let i = 1; i < signal.length; i++) {
+    derivative.push(Math.abs(signal[i] - signal[i - 1]));
+  }
+
+  const qrsRegions = [];
+  let inQRS = false;
+  let start = 0;
+
+  for (let i = 0; i < derivative.length; i++) {
+    if (derivative[i] > thresholdSlope && !inQRS) {
+      inQRS = true;
+      start = i;
+    } else if (derivative[i] <= thresholdSlope && inQRS) {
+      inQRS = false;
+      if (i - start >= minWidth) {
+        qrsRegions.push({ start, end: i });
+      }
+    }
+  }
+  return qrsRegions;
+}
+
+function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, scaleX) {
+  ctx.strokeStyle = 'red';
+  ctx.lineWidth = 1;
+
+  qrsRegions.forEach(region => {
+    const x = region.start * scaleX;
+    ctx.beginPath();
+    ctx.moveTo(x, ventricleLineY);
+    ctx.lineTo(x, ctx.canvas.height);
+    ctx.stroke();
+
+    const xEnd = region.end * scaleX;
+    ctx.beginPath();
+    ctx.moveTo(xEnd, ventricleLineY);
+    ctx.lineTo(xEnd, ctx.canvas.height);
+    ctx.stroke();
+  });
+}
         
         function parseECGXML(xmlText) {
             const parser = new DOMParser();
