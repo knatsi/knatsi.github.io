@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v3.2</title>
+    <title>ECG Ladder Diagram v3.3</title>
     <style>
         * {
             margin: 0;
@@ -485,10 +485,10 @@
     drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
 
     // ---- P-WAVES DRAW and DETECTION ----
-    const pRegions = detectPWaves(leadData, qrsRegions);
-    console.log("Detected P regions:", pRegions);
+    const pRegions = detectPWavesByPeak(leadData, qrsRegions, { preMs: 300, beforeMsLimit: 50, afterMsLimit: 50, horizFactor: 0.02 });
     drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX);
 }
+        
 function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) {
   if (!signal || signal.length < 2) return [];
 
@@ -539,46 +539,98 @@ function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) 
   return mergedRegions;
 }
 
-function detectPWaves(signal, qrsRegions) {
+// Default sampling rate in Hz (change if you know the true sampling rate)
+let sampleRate = 500;
+
+// Utility: clamp
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+/**
+ * Detect P-waves using the 3-step algorithm:
+ * 1) Find peak amplitude in window [qrs.start - preMs .. qrs.start - 50ms]
+ * 2) P start: walk backward from peak until slope (diff) is small (horizontal)
+ *    but not earlier than peak - 50ms (max)
+ * 3) P end: walk forward from peak until slope small, but not later than peak + 50ms
+ *
+ * Returns array of { start: idx, peak: idx, end: idx } (sample indices)
+ */
+function detectPWavesByPeak(signal, qrsRegions, opts = {}) {
+  if (!qrsRegions || qrsRegions.length === 0) return [];
+
+  const preMs = opts.preMs ?? 300;    // look-back window before QRS start
+  const beforeMsLimit = opts.beforeMsLimit ?? 50; // max ms before peak for start (50ms)
+  const afterMsLimit = opts.afterMsLimit ?? 50;   // max ms after peak for end (50ms)
+  const horizFactor = opts.horizFactor ?? 0.02;   // horizontal threshold factor of amplitudeRange
+  const minWidthSamples = opts.minWidthSamples ?? Math.max(3, Math.round(10 * (sampleRate/500))); // tiny minimum width
+
   const pRegions = [];
-  if (!qrsRegions || qrsRegions.length === 0) return pRegions;
+  const ampMin = Math.min(...signal);
+  const ampMax = Math.max(...signal);
+  const amplitudeRange = ampMax - ampMin || 1; // avoid zero
 
-  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
-  const searchWindow = 180; // ~300 ms before QRS (tuneable)
-  const minWidth = 5;
-  const threshold = amplitudeRange * 0.01; // very sensitive (1% of amplitude)
+  // thresholds in samples
+  const preSamples = Math.round((preMs / 1000) * sampleRate);
+  const beforeLimitSamples = Math.round((beforeMsLimit / 1000) * sampleRate);
+  const afterLimitSamples = Math.round((afterMsLimit / 1000) * sampleRate);
 
-  qrsRegions.forEach(qrs => {
-    const endSearch = Math.max(0, qrs.start - 5);
-    const startSearch = Math.max(0, qrs.start - searchWindow);
-    const segment = signal.slice(startSearch, endSearch);
+  // horizontal threshold: when absolute slope falls below this value we treat it as "somewhat horizontal"
+  const horizThreshold = amplitudeRange * horizFactor;
 
-    if (segment.length < 5) return;
+  for (const qrs of qrsRegions) {
+    // define search window (end just before QRS start)
+    const endSearch = clamp(qrs.start - 1, 0, signal.length - 1);
+    const startSearch = clamp(qrs.start - preSamples, 0, endSearch - 1);
+    if (endSearch - startSearch < 3) continue;
 
-    // Compute simple slope magnitude
-    const derivative = [];
-    for (let i = 1; i < segment.length; i++) {
-      derivative.push(Math.abs(segment[i] - segment[i - 1]));
+    // find peak amplitude in that interval (use absolute amplitude so inverted P is detected)
+    let peakIdx = startSearch;
+    let peakVal = Math.abs(signal[startSearch]);
+    for (let i = startSearch + 1; i <= endSearch; i++) {
+      const v = Math.abs(signal[i]);
+      if (v > peakVal) { peakVal = v; peakIdx = i; }
     }
 
-    // Find small sustained area above threshold
-    let inP = false;
-    let start = 0;
-    for (let i = 0; i < derivative.length; i++) {
-      if (!inP && derivative[i] > threshold) {
-        inP = true;
-        start = i;
-      } else if (inP && derivative[i] < threshold * 0.5) {
-        inP = false;
-        if (i - start >= minWidth) {
-          pRegions.push({
-            start: startSearch + start,
-            end: startSearch + i
-          });
-        }
+    // if peak is too close to qrs (less than 5 samples), skip
+    if (qrs.start - peakIdx < 1) continue;
+
+    // Determine P start: walk backward from peak until slope small or reach (peak - beforeLimitSamples) or startSearch
+    let pStart = peakIdx;
+    const pStartLimit = Math.max(startSearch, peakIdx - beforeLimitSamples);
+    for (let i = peakIdx; i > pStartLimit; i--) {
+      const slope = Math.abs(signal[i] - signal[i - 1]);
+      if (slope <= horizThreshold) {
+        // prefer the first place where slope goes small (horizontal)
+        pStart = Math.max(i, pStartLimit);
+        break;
+      }
+      // fallback: if we reach pStartLimit without small slope, we'll set pStart to pStartLimit below
+      pStart = pStartLimit;
+    }
+
+    // Determine P end: walk forward from peak until slope small or reach (peak + afterLimitSamples) or endSearch
+    let pEnd = peakIdx;
+    const pEndLimit = Math.min(endSearch, peakIdx + afterLimitSamples);
+    for (let i = peakIdx; i < pEndLimit; i++) {
+      const slope = Math.abs(signal[i + 1] - signal[i]);
+      if (slope <= horizThreshold) {
+        pEnd = Math.min(i + 1, pEndLimit);
+        break;
+      }
+      pEnd = pEndLimit;
+    }
+
+    // Sanity checks: ensure reasonable width and that start < peak < end and before QRS
+    if (pStart < peakIdx && peakIdx < pEnd && (pEnd - pStart) >= minWidthSamples && pEnd < qrs.start) {
+      pRegions.push({ start: pStart, peak: peakIdx, end: pEnd });
+    } else {
+      // if strict check failed, allow a permissive fallback: small window around peak (max 50ms each side)
+      const fallbackStart = clamp(peakIdx - Math.round(0.03 * sampleRate), startSearch, peakIdx - 1); // 30ms before
+      const fallbackEnd = clamp(peakIdx + Math.round(0.03 * sampleRate), peakIdx + 1, endSearch);
+      if (fallbackEnd - fallbackStart >= minWidthSamples && fallbackEnd < qrs.start) {
+        pRegions.push({ start: fallbackStart, peak: peakIdx, end: fallbackEnd });
       }
     }
-  });
+  }
 
   return pRegions;
 }
@@ -611,13 +663,22 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
 
   pRegions.forEach(region => {
     const xStart = padding + region.start * scaleX;
-    const xEnd = padding + region.end * scaleX;
+    const xPeak  = padding + region.peak  * scaleX;
+    const xEnd   = padding + region.end   * scaleX;
 
     // Start line
     ctx.beginPath();
     ctx.moveTo(xStart, ventricleLineY);
     ctx.lineTo(xStart, ctx.canvas.height);
     ctx.stroke();
+
+    // Peak marker (short dashed vertical)
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(xPeak, ventricleLineY);
+    ctx.lineTo(xPeak, ctx.canvas.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
 
     // End line
     ctx.beginPath();
