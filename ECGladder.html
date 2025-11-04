@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,9 +126,12 @@
         <h1>ECG Ladder Diagram Drawing Tool</h1>
         
         <div class="toolbar">
-            <button id="drawLine" class="active">Draw Line</button>
+            <button id="drawLine" class="active" title="Draw Line">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line">
+              <path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button>
             <button id="adjust">Adjust</button>
-            <button id="drawDot">Draw Symbol</button>
+            <button id="drawDot" title="Draw Symbol">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-dot-icon lucide-circle-dot"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/></svg></button>
             
             <div class="color-picker">
                 <label>Symbol:</label>
@@ -216,6 +220,9 @@
         let draggingEndpoint = null;
         let hoveredSymbol = null;
         let draggingSymbol = null;
+        let pastingMode = false;
+        let pastePreview = null;
+        let pasteReferenceX = 0;
         
         // ECG data
         let ecgData = null;
@@ -227,6 +234,7 @@
         
         // Helper line
         let mouseX = -1;
+        let lastMouseX = 0;
         let showHelperLine = false;
         let measureStartX = null; //Measurementlines
         let measureEndX = null; //Measurementlines
@@ -383,25 +391,44 @@
         
         function redrawCanvas() {
             drawGrid();
-            
+        
+            // --- Draw all lines ---
             lines.forEach((line) => {
-                ctx.strokeStyle = line.color;
-                ctx.lineWidth = line.width;
+                ctx.strokeStyle = line.selected ? '#ff0000' : line.color;
+                ctx.lineWidth = line.selected ? line.width + 1 : line.width;
                 ctx.lineCap = 'round';
-                
+        
                 ctx.beginPath();
                 ctx.moveTo(line.x1, line.y1);
                 ctx.lineTo(line.x2, line.y2);
                 ctx.stroke();
-                
-                if (line.y2 === canvas.height) {
-                    drawArrowhead(line.x1, line.y1, line.x2, line.y2, line.color, line.width);
+        
+                if (line.selected) {
+                    // highlight endpoints
+                    ctx.fillStyle = '#ff0000';
+                    [ [line.x1, line.y1], [line.x2, line.y2] ].forEach(([x, y]) => {
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
                 }
             });
-            
+        
+            // --- Draw all symbols ---
             symbols.forEach((symbol) => {
-                drawSymbol(symbol.x, symbol.y, symbol.type, symbol.color, symbol.size, symbol.lineAngle);
+                drawSymbol(symbol.x, symbol.y, symbol.type, 
+                    symbol.selected ? '#ff0000' : symbol.color, 
+                    symbol.size, symbol.lineAngle);
+        
+                if (symbol.selected) {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(symbol.x, symbol.y, symbol.size * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             });
+
             
             if (hoveredEndpoint && !draggingEndpoint && currentTool === 'adjust') {
                 const line = lines[hoveredEndpoint.lineIndex];
@@ -456,56 +483,56 @@
         }
         
         function drawECG() {
-    if (!currentLead || !ecgData) return;
-    
-    const leadData = ecgData[currentLead];
-    if (!leadData) return;
-    
-    const padding = 10;
-    const drawWidth = canvas.width - padding * 2;
-    const drawHeight = ecgHeight - 40;
-    const yOffset = 30;
-
-    // ECG speed scaling (higher speed = stretched, lower = compressed)
-    const speedRatio = ecgSpeed / 25;
-    const visibleSamples = Math.floor(leadData.length / speedRatio);
-
-    // compute how many pixels per sample for full dataset
-    const totalWidth = (leadData.length / visibleSamples) * drawWidth;
-    maxScrollOffset = Math.max(0, totalWidth - drawWidth);
-    const samplesPerPixel = leadData.length / totalWidth;
-
-    // translate offset to sample index range
-    const startSample = Math.floor((ecgScrollOffset / totalWidth) * leadData.length);
-    const endSample = Math.min(leadData.length, startSample + visibleSamples);
-    const displayData = leadData.slice(startSample, endSample);
-
-    const min = Math.min(...displayData);
-    const max = Math.max(...displayData);
-    const range = max - min;
-    if (range === 0) return;
-
-    const baseline = yOffset + drawHeight - ((0 - min) / range) * drawHeight;
-
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-
-    displayData.forEach((value, index) => {
-        const x = padding + (index / visibleSamples) * drawWidth;
-        const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
-        if (index === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-
-    // Fill remainder with baseline if not full width
-    const usedWidth = padding + (displayData.length / visibleSamples) * drawWidth;
-    if (usedWidth < drawWidth + padding) {
-        ctx.lineTo(drawWidth + padding, baseline);
-    }
-
-    ctx.stroke();
-}
+            if (!currentLead || !ecgData) return;
+            
+            const leadData = ecgData[currentLead];
+            if (!leadData) return;
+            
+            const padding = 10;
+            const drawWidth = canvas.width - padding * 2;
+            const drawHeight = ecgHeight - 40;
+            const yOffset = 30;
+        
+            // ECG speed scaling (higher speed = stretched, lower = compressed)
+            const speedRatio = ecgSpeed / 25;
+            const visibleSamples = Math.floor(leadData.length / speedRatio);
+        
+            // compute how many pixels per sample for full dataset
+            const totalWidth = (leadData.length / visibleSamples) * drawWidth;
+            maxScrollOffset = Math.max(0, totalWidth - drawWidth);
+            const samplesPerPixel = leadData.length / totalWidth;
+        
+            // translate offset to sample index range
+            const startSample = Math.floor((ecgScrollOffset / totalWidth) * leadData.length);
+            const endSample = Math.min(leadData.length, startSample + visibleSamples);
+            const displayData = leadData.slice(startSample, endSample);
+        
+            const min = Math.min(...displayData);
+            const max = Math.max(...displayData);
+            const range = max - min;
+            if (range === 0) return;
+        
+            const baseline = yOffset + drawHeight - ((0 - min) / range) * drawHeight;
+        
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+        
+            displayData.forEach((value, index) => {
+                const x = padding + (index / visibleSamples) * drawWidth;
+                const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+        
+            // Fill remainder with baseline if not full width
+            const usedWidth = padding + (displayData.length / visibleSamples) * drawWidth;
+            if (usedWidth < drawWidth + padding) {
+                ctx.lineTo(drawWidth + padding, baseline);
+            }
+        
+            ctx.stroke();
+        }
 
 
         
@@ -692,19 +719,25 @@
         
         function selectLadderElements() {
             if (!selection) return;
+        
             const x1 = Math.min(selection.startX, selection.endX);
             const y1 = Math.min(selection.startY, selection.endY);
             const x2 = Math.max(selection.startX, selection.endX);
             const y2 = Math.max(selection.startY, selection.endY);
         
-            ladderElements.forEach(el => {
-                el.selected = el.points.some(p => (
-                    p.x >= x1 && p.x <= x2 &&
-                    p.y >= y1 && p.y <= y2
-                ));
+            lines.forEach(line => {
+                line.selected = (
+                    (line.x1 >= x1 && line.x1 <= x2 && line.y1 >= y1 && line.y1 <= y2) ||
+                    (line.x2 >= x1 && line.x2 <= x2 && line.y2 >= y1 && line.y2 <= y2)
+                );
             });
         
-            selection = null;
+            symbols.forEach(symbol => {
+                symbol.selected = (
+                    symbol.x >= x1 && symbol.x <= x2 &&
+                    symbol.y >= y1 && symbol.y <= y2
+                );
+            });
         }
 
         function drawGrid() {
@@ -763,6 +796,41 @@
             ctx.fillText('A (Atria)', 10, atriaStart + atriaHeight / 2);
             ctx.fillText('AV (AV Node)', 10, atriaStart + atriaHeight + avHeight / 2);
             ctx.fillText('V (Ventricles)', 10, ventricleLine + ventricleHeight / 2);
+        }
+        
+        function drawPastePreview(mouseX) {
+            if (!pastePreview) return;
+        
+            const dx = mouseX - pasteReferenceX;
+        
+            ctx.save();
+            ctx.globalAlpha = 0.6;
+        
+            pastePreview.lines.forEach(line => {
+                const newX1 = line.x1 + dx;
+                const newX2 = line.x2 + dx;
+        
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = line.width;
+                ctx.beginPath();
+                ctx.moveTo(newX1, line.y1);
+                ctx.lineTo(newX2, line.y2);
+                ctx.stroke();
+        
+                // endpoint highlights
+                ctx.fillStyle = '#ff0000';
+                [ [newX1, line.y1], [newX2, line.y2] ].forEach(([x, y]) => {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        
+            pastePreview.symbols.forEach(symbol => {
+                drawSymbol(symbol.x + dx, symbol.y, symbol.type, '#ff0000', symbol.size, symbol.lineAngle);
+            });
+        
+            ctx.restore();
         }
         
         function saveState() {
@@ -951,25 +1019,41 @@
         
         document.addEventListener('keydown', e => {
             if (e.key === 'Delete') {
-                ladderElements = ladderElements.filter(el => !el.selected);
+                lines = lines.filter(l => !l.selected);
+                symbols = symbols.filter(s => !s.selected);
                 redrawCanvas();
             }
         
             if (e.ctrlKey && e.key.toLowerCase() === 'c') {
-                clipboard = ladderElements.filter(el => el.selected).map(el => structuredClone(el));
+                clipboard = {
+                    lines: lines.filter(l => l.selected).map(l => ({...l})),
+                    symbols: symbols.filter(s => s.selected).map(s => ({...s}))
+                };
             }
         
             if (e.ctrlKey && e.key.toLowerCase() === 'v' && clipboard) {
-                // offset pasted elements slightly
-                const offset = 20;
-                clipboard.forEach(el => {
-                    el.selected = false;
-                    el.points = el.points.map(p => ({x: p.x + offset, y: p.y + offset}));
-                    ladderElements.push(el);
-                });
+                // Create deep copy
+                pastePreview = {
+                    lines: clipboard.lines.map(l => ({ ...l, selected: true })),
+                    symbols: clipboard.symbols.map(s => ({ ...s, selected: true }))
+                };
+        
+                // Find the horizontal center of copied content
+                const allXs = [
+                    ...pastePreview.lines.flatMap(l => [l.x1, l.x2]),
+                    ...pastePreview.symbols.map(s => s.x)
+                ];
+                const centerX = (Math.min(...allXs) + Math.max(...allXs)) / 2;
+        
+                // Start paste mode
+                pastingMode = true;
+                pasteReferenceX = centerX; // store where this geometry is centered
+                lastMouseX = canvas.width / 2; // default initial position
                 redrawCanvas();
+                drawPastePreview(lastMouseX);
             }
         });
+
                 
         canvas.addEventListener('mousedown', e => {
             const rect = canvas.getBoundingClientRect();
@@ -988,6 +1072,34 @@
                 // Start selection
                 selection = { startX: x, startY: y, endX: x, endY: y };
                 isSelecting = true;
+                return;
+            }
+            
+            if (pastingMode && y >= ladderHeight) {
+                const dx = lastMouseX - pasteReferenceX;
+            
+                pastePreview.lines.forEach(line => {
+                    lines.push({
+                        ...line,
+                        x1: line.x1 + dx,
+                        x2: line.x2 + dx,
+                        selected: false
+                    });
+                });
+            
+                pastePreview.symbols.forEach(symbol => {
+                    symbols.push({
+                        ...symbol,
+                        x: symbol.x + dx,
+                        y: symbol.y,
+                        selected: false
+                    });
+                });
+            
+                pastingMode = false;
+                pastePreview = null;
+                redrawCanvas();
+                return;
             }
             
             if (currentTool === 'adjust') {
@@ -1040,6 +1152,24 @@
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+            
+            lastMouseX = x;
+            
+            if (pastingMode && pastePreview) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                lastMouseX = mouseX;
+            
+                redrawCanvas();
+                drawPastePreview(mouseX);
+                return; // stop other move logic while pasting
+            }
+        
+            if (isSelecting) {
+                selection.endX = x;
+                redrawCanvas();
+                drawSelection();
+            }
 
             if (isMeasuring && e.ctrlKey) {
                 const rect = canvas.getBoundingClientRect();
@@ -1055,6 +1185,7 @@
                 selection.endY = e.clientY - rect.top;
                 redrawCanvas();
                 drawSelection();
+                return;
             }
             
             mouseX = x;
@@ -1180,8 +1311,9 @@
             
             if (isSelecting) {
                 isSelecting = false;
+                selectLadderElements();
+                selection = null;
                 redrawCanvas();
-                drawSelection(true);
             }
             
             if (draggingEndpoint) {
@@ -1231,6 +1363,13 @@
             isDrawing = false;
             showHelperLine = false;
             redrawCanvas();
+        });
+        canvas.addEventListener('click', e => {
+            if (!e.shiftKey) {
+                lines.forEach(l => l.selected = false);
+                symbols.forEach(s => s.selected = false);
+                redrawCanvas();
+            }
         });
     </script>
 </body>
