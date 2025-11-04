@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ECG Ladder Diagram v3.4</title>
+    <title>ECG Ladder Diagram</title>
     <style>
         * {
             margin: 0;
@@ -109,6 +109,11 @@
             border-radius: 4px;
         }
         
+        input[type="range"] {
+            width: 150px;
+            cursor: pointer;
+        }
+        
         label {
             font-size: 14px;
             color: #555;
@@ -123,15 +128,14 @@
             <button id="drawLine" class="active">Draw Line</button>
             <button id="adjust">Adjust</button>
             <button id="drawDot">Draw Symbol</button>
-            <button id="eraser">Eraser</button>
             
             <div class="color-picker">
                 <label>Symbol:</label>
                 <select id="symbolType">
-                    <option value="dot">● Dot</option>
-                    <option value="arrow">→ Arrow</option>
-                    <option value="singleLine">⊥ Single Line</option>
-                    <option value="doubleLine">⊥⊥ Double Line</option>
+                    <option value="dot">Dot</option>
+                    <option value="arrow">Arrow</option>
+                    <option value="singleLine">Single Line</option>
+                    <option value="doubleLine">Double Line</option>
                 </select>
             </div>
             
@@ -147,6 +151,7 @@
             
             <button id="undo">Undo</button>
             <button id="clear" class="clear">Clear All</button>
+            <button id="saveImageBtn">Save Image</button>
         </div>
         
         <div class="toolbar">
@@ -159,16 +164,22 @@
                 <label>Select Lead:</label>
                 <select id="leadDropdown"></select>
             </div>
+            
+            <div class="color-picker" id="speedSelector" style="display: none;">
+                <label>ECG Speed: <span id="speedValue">25</span> mm/s</label>
+                <input type="range" id="speedSlider" min="0" max="3" value="1" step="1">
+            </div>
+            
+            <div class="color-picker" id="scrollSelector" style="display: none;">
+                <label>Scroll:</label>
+                <input type="range" id="scrollSlider" min="0" max="100" value="0" step="1">
+            </div>
         </div>
         
         <div class="canvas-container">
             <canvas id="canvas" width="1200" height="450"></canvas>
         </div>
-        <div style="margin-top:10px;">
-              <label for="sensitivitySlider">Detection sensitivity:</label>
-              <input type="range" id="sensitivitySlider" min="0.01" max="0.5" step="0.01" value="0.2">
-              <span id="sensitivityValue">0.2</span>
-        </div>
+        
         <div class="info">
             <strong>Instructions:</strong> Click and drag to draw. The ladder shows three chambers: Atria (A), AV Node (AV), and Ventricles (V). Use different tools to create your ECG ladder diagram showing electrical conduction paths.
         </div>
@@ -188,8 +199,15 @@
         let history = [];
         let tempCanvas = document.createElement('canvas');
         let tempCtx = tempCanvas.getContext('2d');
+        let ecgScrollOffset = 0;     // horizontal offset in pixels
+        let maxScrollOffset = 0;     // how far we can scroll
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
+        let selection = null;
+        let clipboard = null;
+        let isSelecting = false;
+        let ladderElements = []; // each element: { type, points, selected }
+        
         
         // Store all drawn lines and symbols
         let lines = [];
@@ -204,10 +222,15 @@
         let ecgLeads = [];
         let currentLead = null;
         let ecgHeight = 150;
+        let ecgSpeed = 25;
+        const speedOptions = [12.5, 25, 50, 100];
         
         // Helper line
         let mouseX = -1;
         let showHelperLine = false;
+        let measureStartX = null; //Measurementlines
+        let measureEndX = null; //Measurementlines
+        let isMeasuring = false; //Measurementlines
         
         const atriaStart = ecgHeight;
         const ladderHeight = canvas.height - ecgHeight;
@@ -221,19 +244,19 @@
         const halfStepV = ventricleHeight / 4;
         
         const snapLines = [
-            atriaStart,                                          // Top of ladder (bottom of ECG)
-            atriaStart + halfStepA,                             // Half step below top (in A)
-            atriaStart + atriaHeight / 2,                       // A center
-            atriaStart + atriaHeight - halfStepA,               // Half between A and AV
-            atriaStart + atriaHeight,                           // A/AV border line
-            atriaStart + atriaHeight + halfStepAV,              // Half between A and AV (in AV)
-            atriaStart + atriaHeight + avHeight / 2,            // AV center
-            ventricleLine - halfStepAV,                         // Half between AV and V (in AV)
-            ventricleLine,                                      // AV/V border line
-            ventricleLine + halfStepV,                          // Half between AV and V (in V)
-            ventricleLine + ventricleHeight / 2,                // V center
-            canvas.height - halfStepV,                          // Half step above bottom (in V)
-            canvas.height                                       // Bottom edge
+            atriaStart,
+            atriaStart + halfStepA,
+            atriaStart + atriaHeight / 2,
+            atriaStart + atriaHeight - halfStepA,
+            atriaStart + atriaHeight,
+            atriaStart + atriaHeight + halfStepAV,
+            atriaStart + atriaHeight + avHeight / 2,
+            ventricleLine - halfStepAV,
+            ventricleLine,
+            ventricleLine + halfStepV,
+            ventricleLine + ventricleHeight / 2,
+            canvas.height - halfStepV,
+            canvas.height
         ];
         
         function snapToLine(y) {
@@ -333,7 +356,6 @@
                     const lineLen2 = radius * 1.5;
                     const spacing = size * 2;
                     
-                    // First line
                     ctx.beginPath();
                     ctx.moveTo(
                         x - lineLen2 * Math.cos(perpAngle2) - spacing * Math.cos(lineAngle),
@@ -345,7 +367,6 @@
                     );
                     ctx.stroke();
                     
-                    // Second line
                     ctx.beginPath();
                     ctx.moveTo(
                         x - lineLen2 * Math.cos(perpAngle2) + spacing * Math.cos(lineAngle),
@@ -363,8 +384,7 @@
         function redrawCanvas() {
             drawGrid();
             
-            // Draw all lines
-            lines.forEach((line, index) => {
+            lines.forEach((line) => {
                 ctx.strokeStyle = line.color;
                 ctx.lineWidth = line.width;
                 ctx.lineCap = 'round';
@@ -374,18 +394,15 @@
                 ctx.lineTo(line.x2, line.y2);
                 ctx.stroke();
                 
-                // Draw arrow if endpoint is at bottom edge
                 if (line.y2 === canvas.height) {
                     drawArrowhead(line.x1, line.y1, line.x2, line.y2, line.color, line.width);
                 }
             });
             
-            // Draw all symbols
             symbols.forEach((symbol) => {
                 drawSymbol(symbol.x, symbol.y, symbol.type, symbol.color, symbol.size, symbol.lineAngle);
             });
             
-            // Draw hover dots for line endpoints
             if (hoveredEndpoint && !draggingEndpoint && currentTool === 'adjust') {
                 const line = lines[hoveredEndpoint.lineIndex];
                 const x = hoveredEndpoint.endpoint === 'start' ? line.x1 : line.x2;
@@ -397,7 +414,6 @@
                 ctx.fill();
             }
             
-            // Draw hover indicator for symbols
             if (hoveredSymbol !== null && !draggingSymbol && currentTool === 'adjust') {
                 const symbol = symbols[hoveredSymbol];
                 ctx.strokeStyle = '#2196F3';
@@ -407,7 +423,6 @@
                 ctx.stroke();
             }
             
-            // Draw helper line
             if (showHelperLine && mouseX >= 0) {
                 ctx.strokeStyle = '#2196F3';
                 ctx.lineWidth = 1;
@@ -442,242 +457,57 @@
         
         function drawECG() {
     if (!currentLead || !ecgData) return;
-
+    
     const leadData = ecgData[currentLead];
     if (!leadData) return;
-
+    
     const padding = 10;
     const drawWidth = canvas.width - padding * 2;
     const drawHeight = ecgHeight - 40;
     const yOffset = 30;
 
-    // Find min and max for scaling
-    const min = Math.min(...leadData);
-    const max = Math.max(...leadData);
+    // ECG speed scaling (higher speed = stretched, lower = compressed)
+    const speedRatio = ecgSpeed / 25;
+    const visibleSamples = Math.floor(leadData.length / speedRatio);
+
+    // compute how many pixels per sample for full dataset
+    const totalWidth = (leadData.length / visibleSamples) * drawWidth;
+    maxScrollOffset = Math.max(0, totalWidth - drawWidth);
+    const samplesPerPixel = leadData.length / totalWidth;
+
+    // translate offset to sample index range
+    const startSample = Math.floor((ecgScrollOffset / totalWidth) * leadData.length);
+    const endSample = Math.min(leadData.length, startSample + visibleSamples);
+    const displayData = leadData.slice(startSample, endSample);
+
+    const min = Math.min(...displayData);
+    const max = Math.max(...displayData);
     const range = max - min;
     if (range === 0) return;
 
-    // Scaling for X coordinates
-    const scaleX = drawWidth / leadData.length;
+    const baseline = yOffset + drawHeight - ((0 - min) / range) * drawHeight;
 
-    // Pick a "ventricle line" — baseline at bottom of ECG plot
-    const ventricleLineY = yOffset + drawHeight;
-
-    // ---- QRS DETECTION ----
-    const sensitivity = parseFloat(document.getElementById("sensitivitySlider").value);
-    const qrsRegions = detectQRS(leadData, sensitivity, 8);
-
-    // ---- DRAW ECG ----
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = 1;
     ctx.beginPath();
 
-    leadData.forEach((value, index) => {
-        const x = padding + index * scaleX;
+    displayData.forEach((value, index) => {
+        const x = padding + (index / visibleSamples) * drawWidth;
         const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
         if (index === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
     });
+
+    // Fill remainder with baseline if not full width
+    const usedWidth = padding + (displayData.length / visibleSamples) * drawWidth;
+    if (usedWidth < drawWidth + padding) {
+        ctx.lineTo(drawWidth + padding, baseline);
+    }
+
     ctx.stroke();
-
-    // ---- DRAW QRS MARKERS ----
-    drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX);
-
-    // ---- P-WAVES DRAW and DETECTION ----
-    const pRegions = detectPWavesByPeak(leadData, qrsRegions, {
-          sampleRate: 500,
-          searchStartMs: 300,
-          searchEndMs: 80,
-          horizMs: 50,
-          horizFactor: 0.015
-        });
-    drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX);
-}
-        
-function detectQRS(signal, thresholdFactor = 0.5, minWidth = 10, mergeGap = 20) {
-  if (!signal || signal.length < 2) return [];
-
-  // Compute derivative magnitude
-  const derivative = [];
-  for (let i = 1; i < signal.length; i++) {
-    derivative.push(Math.abs(signal[i] - signal[i - 1]));
-  }
-
-  // Adaptive threshold based on amplitude range
-  const amplitudeRange = Math.max(...signal) - Math.min(...signal);
-  const adaptiveThreshold = thresholdFactor * (amplitudeRange * 0.1);
-  const hysteresis = adaptiveThreshold * 0.5; // 50% lower threshold to exit QRS
-
-  const rawRegions = [];
-  let inQRS = false;
-  let start = 0;
-
-  for (let i = 0; i < derivative.length; i++) {
-    if (!inQRS && derivative[i] > adaptiveThreshold) {
-      inQRS = true;
-      start = i;
-    } else if (inQRS && derivative[i] < hysteresis) {
-      inQRS = false;
-      if (i - start >= minWidth) {
-        rawRegions.push({ start, end: i });
-      }
-    }
-  }
-
-  // Merge regions that are very close (handle multi-line detection)
-  const mergedRegions = [];
-  if (rawRegions.length > 0) {
-    let current = rawRegions[0];
-    for (let i = 1; i < rawRegions.length; i++) {
-      const next = rawRegions[i];
-      if (next.start - current.end < mergeGap) {
-        // Merge overlapping or close regions
-        current.end = next.end;
-      } else {
-        mergedRegions.push(current);
-        current = next;
-      }
-    }
-    mergedRegions.push(current);
-  }
-
-  return mergedRegions;
 }
 
-// Default sampling rate in Hz (change if you know the true sampling rate)
-let sampleRate = 500;
 
-// Utility: clamp
-function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-
-/**
- * Detect P-waves using the 3-step algorithm:
- * 1) Find peak amplitude in window [qrs.start - preMs .. qrs.start - 50ms]
- * 2) P start: walk backward from peak until slope (diff) is small (horizontal)
- *    but not earlier than peak - 50ms (max)
- * 3) P end: walk forward from peak until slope small, but not later than peak + 50ms
- *
- * Returns array of { start: idx, peak: idx, end: idx } (sample indices)
- */
-function detectPWavesByPeak(signal, qrsRegions, opts = {}) {
-  if (!qrsRegions || qrsRegions.length === 0) return [];
-
-  const sampleRate = opts.sampleRate ?? 500;
-  const searchStartMs = opts.searchStartMs ?? 300;  // start looking 300 ms before QRS
-  const searchEndMs = opts.searchEndMs ?? 80;       // stop 80 ms before QRS
-  const horizMs = opts.horizMs ?? 50;               // max distance to find horizontal edges
-  const horizFactor = opts.horizFactor ?? 0.015;    // slope threshold for “horizontal”
-
-  const range = Math.max(...signal) - Math.min(...signal);
-  const slopeThreshold = range * horizFactor;
-
-  const searchStartSamples = Math.round((searchStartMs / 1000) * sampleRate);
-  const searchEndSamples = Math.round((searchEndMs / 1000) * sampleRate);
-  const horizSamples = Math.round((horizMs / 1000) * sampleRate);
-
-  const pRegions = [];
-
-  for (const qrs of qrsRegions) {
-    const qrsStart = qrs.start;
-    const winEnd = Math.max(0, qrsStart - searchEndSamples);
-    const winStart = Math.max(0, qrsStart - searchStartSamples);
-    if (winEnd - winStart < 5) continue;
-
-    // compute mean polarity in this segment
-    const seg = signal.slice(winStart, winEnd);
-    const mean = seg.reduce((a, b) => a + b, 0) / seg.length;
-    const positive = mean >= 0;
-
-    // find the largest amplitude (positive or negative depending on polarity)
-    let peakIdx = winStart;
-    let peakVal = positive ? -Infinity : Infinity;
-    for (let i = winStart; i < winEnd; i++) {
-      const v = signal[i];
-      if ((positive && v > peakVal) || (!positive && v < peakVal)) {
-        peakVal = v;
-        peakIdx = i;
-      }
-    }
-
-    // find beginning (horizontal) before peak
-    let pStart = peakIdx;
-    for (let i = peakIdx; i > Math.max(winStart, peakIdx - horizSamples); i--) {
-      if (Math.abs(signal[i] - signal[i - 1]) < slopeThreshold) {
-        pStart = i;
-        break;
-      }
-    }
-
-    // find end (horizontal) after peak
-    let pEnd = peakIdx;
-    for (let i = peakIdx; i < Math.min(winEnd - 1, peakIdx + horizSamples); i++) {
-      if (Math.abs(signal[i + 1] - signal[i]) < slopeThreshold) {
-        pEnd = i + 1;
-        break;
-      }
-    }
-
-    if (pStart < pEnd && pEnd < qrsStart) {
-      pRegions.push({ start: pStart, peak: peakIdx, end: pEnd });
-    }
-  }
-
-  return pRegions;
-}
-
-function drawQRSMarkers(ctx, qrsRegions, ventricleLineY, padding, scaleX) {
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 1;
-
-    qrsRegions.forEach(region => {
-        const xStart = padding + region.start * scaleX;
-        const xEnd = padding + region.end * scaleX;
-
-        // Start line
-        ctx.beginPath();
-        ctx.moveTo(xStart, ventricleLineY);
-        ctx.lineTo(xStart, ctx.canvas.height);
-        ctx.stroke();
-
-        // End line
-        ctx.beginPath();
-        ctx.moveTo(xEnd, ventricleLineY);
-        ctx.lineTo(xEnd, ctx.canvas.height);
-        ctx.stroke();
-    });
-}
-
-function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
-  ctx.strokeStyle = 'green';
-  ctx.lineWidth = 1;
-
-  pRegions.forEach(region => {
-    const xStart = padding + region.start * scaleX;
-    const xPeak  = padding + region.peak  * scaleX;
-    const xEnd   = padding + region.end   * scaleX;
-
-    // Start line
-    ctx.beginPath();
-    ctx.moveTo(xStart, ventricleLineY);
-    ctx.lineTo(xStart, ctx.canvas.height);
-    ctx.stroke();
-
-    // Peak marker (short dashed vertical)
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath();
-    ctx.moveTo(xPeak, ventricleLineY);
-    ctx.lineTo(xPeak, ctx.canvas.height);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // End line
-    ctx.beginPath();
-    ctx.moveTo(xEnd, ventricleLineY);
-    ctx.lineTo(xEnd, ctx.canvas.height);
-    ctx.stroke();
-  });
-}
         
         function parseECGXML(xmlText) {
             const parser = new DOMParser();
@@ -686,7 +516,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             const parsedData = {};
             const leads = [];
             
-            // Try RestECG format (RhythmLead elements)
             const rhythmLeads = xmlDoc.getElementsByTagName('RhythmLead');
             
             if (rhythmLeads.length > 0) {
@@ -706,7 +535,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                                 bytes[j] = binaryString.charCodeAt(j);
                             }
                             
-                            // Parse 16-bit signed integers (little-endian)
                             const samples = [];
                             for (let j = 0; j < bytes.length - 1; j += 2) {
                                 const value = bytes[j] | (bytes[j + 1] << 8);
@@ -723,7 +551,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                     }
                 }
             } else {
-                // Try generic Waveform format
                 const waveforms = xmlDoc.getElementsByTagName('Waveform');
                 
                 for (let i = 0; i < waveforms.length; i++) {
@@ -766,27 +593,136 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             return { data: parsedData, leads: leads };
         }
         
-        // Draw the ladder diagram grid
+        function drawLadder() {
+            ladderElements.forEach(el => {
+                ctx.strokeStyle = el.selected ? 'red' : 'black';
+                ctx.fillStyle = el.selected ? 'red' : 'black';
+                ctx.lineWidth = el.selected ? 2 : 1;
+        
+                if (el.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(el.points[0].x, el.points[0].y);
+                    ctx.lineTo(el.points[1].x, el.points[1].y);
+                    ctx.stroke();
+        
+                    if (el.selected) {
+                        el.points.forEach(p => {
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                } else if (el.type === 'symbol') {
+                    const p = el.points[0];
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+        function drawMeasurement() {
+            if (measureStartX === null || measureEndX === null) return;
+        
+            const start = Math.min(measureStartX, measureEndX);
+            const end = Math.max(measureStartX, measureEndX);
+            const mid = (start + end) / 2;
+        
+            // Main red measurement lines
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+        
+            ctx.beginPath();
+            ctx.moveTo(start, 0);
+            ctx.lineTo(start, canvas.height);
+            ctx.stroke();
+        
+            ctx.beginPath();
+            ctx.moveTo(end, 0);
+            ctx.lineTo(end, canvas.height);
+            ctx.stroke();
+        
+            ctx.setLineDash([]);
+        
+            // Compute time difference (in ms)
+            const mmPerPixel = 0.2117; // your calibrated value
+            const msPerMm = 1000 / ecgSpeed; // e.g. 25 mm/s = 40 ms/mm
+            const distanceMm = (end - start) * mmPerPixel;
+            const timeMs = distanceMm * msPerMm;
+        
+            // Draw repeated lighter sub-lines at same intervals after the end line
+            const spacing = end - start;
+            const numRepeats = 3; // number of extra segments
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 6]);
+        
+            for (let i = 1; i <= numRepeats; i++) {
+                const x = end + i * spacing;
+                if (x > canvas.width) break; // don't draw beyond canvas
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        
+            ctx.setLineDash([]);
+        
+            // Label in ms at the end line
+            ctx.fillStyle = 'red';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${timeMs.toFixed(1)} ms`, end + 5, canvas.height - 10);
+        }
+
+        function drawSelection() {
+            if (!selection) return;
+            const x = Math.min(selection.startX, selection.endX);
+            const y = Math.min(selection.startY, selection.endY);
+            const w = Math.abs(selection.endX - selection.startX);
+            const h = Math.abs(selection.endY - selection.startY);
+        
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0,0,255,0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
+        
+        function selectLadderElements() {
+            if (!selection) return;
+            const x1 = Math.min(selection.startX, selection.endX);
+            const y1 = Math.min(selection.startY, selection.endY);
+            const x2 = Math.max(selection.startX, selection.endX);
+            const y2 = Math.max(selection.startY, selection.endY);
+        
+            ladderElements.forEach(el => {
+                el.selected = el.points.some(p => (
+                    p.x >= x1 && p.x <= x2 &&
+                    p.y >= y1 && p.y <= y2
+                ));
+            });
+        
+            selection = null;
+        }
+
         function drawGrid() {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw ECG area
             ctx.fillStyle = '#f0f0f0';
             ctx.fillRect(0, 0, canvas.width, ecgHeight);
             
-            // ECG label
             ctx.fillStyle = '#333333';
             ctx.font = 'bold 16px Arial';
             ctx.textBaseline = 'top';
             ctx.fillText('ECG', 10, 10);
             
-            // Draw ECG if available
             if (currentLead && ecgData) {
                 drawECG();
             }
             
-            // ECG bottom border (thicker)
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -794,7 +730,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             ctx.lineTo(canvas.width, ecgHeight);
             ctx.stroke();
             
-            // Horizontal dividing lines (black and thicker)
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
             
@@ -808,19 +743,22 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             ctx.lineTo(canvas.width, ventricleLine);
             ctx.stroke();
             
-            // Vertical grid lines (every 40px, but not at edges)
+            // light vertical grid lines that scroll with ECG
             ctx.strokeStyle = '#eeeeee';
             ctx.lineWidth = 1;
-            for (let x = 40; x < canvas.width; x += 40) {
+            
+            const gridSpacing = 40;
+            const totalGridWidth = Math.ceil((canvas.width + maxScrollOffset) / gridSpacing) * gridSpacing;
+            
+            for (let x = -ecgScrollOffset % gridSpacing; x < canvas.width; x += gridSpacing) {
                 ctx.beginPath();
                 ctx.moveTo(x, ecgHeight);
                 ctx.lineTo(x, canvas.height);
                 ctx.stroke();
             }
             
-            // Labels - vertically centered in each chamber
             ctx.fillStyle = '#333333';
-            ctx.font = 'bold 20px Arial';
+            ctx.font = 'bold 16px Arial';
             ctx.textBaseline = 'middle';
             ctx.fillText('A (Atria)', 10, atriaStart + atriaHeight / 2);
             ctx.fillText('AV (AV Node)', 10, atriaStart + atriaHeight + avHeight / 2);
@@ -849,11 +787,40 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             img.src = state.dataUrl;
         }
         
-        // Initialize
+        function getSelectionRect() {
+            if (!selection) return null;
+            const x = Math.min(selection.startX, selection.endX);
+            const y = Math.min(selection.startY, selection.endY);
+            const w = Math.abs(selection.endX - selection.startX);
+            const h = Math.abs(selection.endY - selection.startY);
+            return { x, y, w, h };
+        }
+        
+        function clearSelection() {
+            const rect = getSelectionRect();
+            if (!rect) return;
+            ctx.clearRect(rect.x, rect.y, rect.w, rect.h);
+            selection = null;
+        }
+        
+        function copySelection() {
+            const rect = getSelectionRect();
+            if (!rect) return;
+            const imageData = ctx.getImageData(rect.x, rect.y, rect.w, rect.h);
+            clipboard = { data: imageData, width: rect.w, height: rect.h };
+        }
+        
+        function pasteSelection() {
+            if (!clipboard) return;
+            const x = selection ? selection.startX : 20; // default paste offset
+            const y = selection ? selection.startY : 20;
+            ctx.putImageData(clipboard.data, x, y);
+            selection = null;
+        }
+        
         drawGrid();
         saveState();
         
-        // Event listeners for tools
         document.getElementById('drawLine').addEventListener('click', function() {
             currentTool = 'line';
             document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
@@ -884,7 +851,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             currentSymbol = e.target.value;
         });
         
-        // ECG file loading
         document.getElementById('ecgFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -898,7 +864,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                     ecgData = result.data;
                     ecgLeads = result.leads;
                     
-                    // Populate dropdown
                     const dropdown = document.getElementById('leadDropdown');
                     dropdown.innerHTML = '';
                     ecgLeads.forEach(lead => {
@@ -910,6 +875,10 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                     
                     currentLead = ecgLeads[0];
                     document.getElementById('leadSelector').style.display = 'flex';
+                    document.getElementById('speedSelector').style.display = 'flex';
+                    document.getElementById('scrollSelector').style.display = 'flex';
+                    document.getElementById('scrollSlider').value = 0;
+                      ecgScrollOffset = 0;
                     redrawCanvas();
                 } else {
                     alert('No valid ECG leads found in the XML file.');
@@ -923,12 +892,17 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             redrawCanvas();
         });
         
-        document.getElementById('eraser').addEventListener('click', function() {
-            currentTool = 'eraser';
-            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            canvas.style.cursor = 'crosshair';
-            hoveredEndpoint = null;
+        document.getElementById('speedSlider').addEventListener('input', function(e) {
+            const speedIndex = parseInt(e.target.value);
+            ecgSpeed = speedOptions[speedIndex];
+            document.getElementById('speedValue').textContent = ecgSpeed;
+            redrawCanvas();
+        });
+        
+        document.getElementById('scrollSlider').addEventListener('input', function(e) {
+            if (maxScrollOffset <= 0) return;
+            const percent = parseInt(e.target.value) / 100;
+            ecgScrollOffset = percent * maxScrollOffset;
             redrawCanvas();
         });
         
@@ -946,6 +920,7 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 restoreState(history[history.length - 1]);
             } else if (history.length === 1) {
                 lines = [];
+                symbols = [];
                 drawGrid();
             }
         });
@@ -958,13 +933,63 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             saveState();
         });
         
-        // Drawing functions
-        canvas.addEventListener('mousedown', function(e) {
+        document.getElementById('saveImageBtn').addEventListener('click', () => {
+            // Make sure the canvas is freshly drawn (to include measurement lines, etc.)
+            redrawCanvas();
+            drawMeasurement(); // keep measurement overlay visible in export
+        
+            // Convert canvas to PNG image
+            const image = canvas.toDataURL('image/png');
+        
+            // Create a hidden download link
+            const now = new Date().toISOString().replace(/[:.]/g, '-');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `ECG_${now}.png`;
+            link.click();
+        });
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Delete') {
+                ladderElements = ladderElements.filter(el => !el.selected);
+                redrawCanvas();
+            }
+        
+            if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+                clipboard = ladderElements.filter(el => el.selected).map(el => structuredClone(el));
+            }
+        
+            if (e.ctrlKey && e.key.toLowerCase() === 'v' && clipboard) {
+                // offset pasted elements slightly
+                const offset = 20;
+                clipboard.forEach(el => {
+                    el.selected = false;
+                    el.points = el.points.map(p => ({x: p.x + offset, y: p.y + offset}));
+                    ladderElements.push(el);
+                });
+                redrawCanvas();
+            }
+        });
+                
+        canvas.addEventListener('mousedown', e => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             
-            // Check if clicking on an endpoint or symbol (only in adjust mode)
+            if (e.ctrlKey) {
+                const rect = canvas.getBoundingClientRect();
+                measureStartX = e.clientX - rect.left;
+                measureEndX = null;
+                isMeasuring = true;
+                return;
+            }
+            
+            if (e.shiftKey) {
+                // Start selection
+                selection = { startX: x, startY: y, endX: x, endY: y };
+                isSelecting = true;
+            }
+            
             if (currentTool === 'adjust') {
                 const endpoint = findEndpointAtPosition(x, y);
                 if (endpoint) {
@@ -987,14 +1012,11 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 tempStartX = startX;
                 tempStartY = startY;
                 
-                // Save current canvas state to temp canvas
                 tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
                 tempCtx.drawImage(canvas, 0, 0);
             } else if (currentTool === 'dot') {
-                // Find nearest endpoint to snap to
                 const endpoint = findEndpointAtPosition(x, y);
                 if (endpoint) {
-                    // Find the line to calculate angle
                     const line = lines[endpoint.lineIndex];
                     const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
                     
@@ -1011,22 +1033,32 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                     redrawCanvas();
                     saveState();
                 }
-            } else if (currentTool === 'eraser') {
-                isDrawing = true;
-                startX = x;
-                startY = y;
             }
         });
         
-        canvas.addEventListener('mousemove', function(e) {
+        canvas.addEventListener('mousemove', e => {
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+
+            if (isMeasuring && e.ctrlKey) {
+                const rect = canvas.getBoundingClientRect();
+                measureEndX = e.clientX - rect.left;
+                redrawCanvas();
+                drawMeasurement();
+                return;
+            }
+
+            if (isSelecting && e.shiftKey) {
+                const rect = canvas.getBoundingClientRect();
+                selection.endX = e.clientX - rect.left;
+                selection.endY = e.clientY - rect.top;
+                redrawCanvas();
+                drawSelection();
+            }
             
-            // Update helper line position
             mouseX = x;
             
-            // Handle endpoint dragging
             if (draggingEndpoint) {
                 const line = lines[draggingEndpoint.lineIndex];
                 const snappedY = snapToLine(y);
@@ -1043,7 +1075,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 return;
             }
             
-            // Handle symbol dragging
             if (draggingSymbol !== null) {
                 const endpoint = findEndpointAtPosition(x, y);
                 if (endpoint) {
@@ -1060,7 +1091,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 return;
             }
             
-            // Handle hover detection when in adjust mode
             if (currentTool === 'adjust') {
                 const endpoint = findEndpointAtPosition(x, y);
                 const symbolIndex = findSymbolAtPosition(x, y);
@@ -1084,7 +1114,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 return;
             }
             
-            // Handle hover in dot mode
             if (currentTool === 'dot') {
                 const endpoint = findEndpointAtPosition(x, y);
                 if (endpoint) {
@@ -1098,8 +1127,7 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 return;
             }
             
-            // Show helper line for other tools
-            if (currentTool === 'line' || currentTool === 'eraser') {
+            if (currentTool === 'line') {
                 showHelperLine = true;
             }
             
@@ -1111,11 +1139,9 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             if (currentTool === 'line') {
                 const snappedY = snapToLine(y);
                 
-                // Restore canvas from temp
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(tempCanvas, 0, 0);
                 
-                // Draw preview line
                 ctx.strokeStyle = currentColor;
                 ctx.lineWidth = currentLineWidth;
                 ctx.lineCap = 'round';
@@ -1125,12 +1151,10 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 ctx.lineTo(x, snappedY);
                 ctx.stroke();
                 
-                // Draw arrow if endpoint is at bottom edge
                 if (snappedY === canvas.height) {
                     drawArrowhead(tempStartX, tempStartY, x, snappedY, currentColor, currentLineWidth);
                 }
                 
-                // Draw helper line
                 if (showHelperLine) {
                     ctx.strokeStyle = '#2196F3';
                     ctx.lineWidth = 1;
@@ -1141,24 +1165,25 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                     ctx.stroke();
                     ctx.setLineDash([]);
                 }
-            } else if (currentTool === 'eraser') {
-                ctx.clearRect(x - 10, y - 10, 20, 20);
-                // Redraw grid lines in erased area
-                if (Math.abs(y - (atriaStart + atriaHeight)) < 10 || Math.abs(y - ventricleLine) < 10) {
-                    ctx.strokeStyle = '#000000';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    const lineY = Math.abs(y - (atriaStart + atriaHeight)) < 10 ? (atriaStart + atriaHeight) : ventricleLine;
-                    ctx.moveTo(x - 10, lineY);
-                    ctx.lineTo(x + 10, lineY);
-                    ctx.stroke();
-                }
-                startX = x;
-                startY = y;
             }
         });
         
-        canvas.addEventListener('mouseup', function(e) {
+        canvas.addEventListener('mouseup', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                measureEndX = e.clientX - rect.left;
+                redrawCanvas();
+                drawMeasurement();
+                isMeasuring = false;
+                return;
+            }
+            
+            if (isSelecting) {
+                isSelecting = false;
+                redrawCanvas();
+                drawSelection(true);
+            }
+            
             if (draggingEndpoint) {
                 draggingEndpoint = null;
                 saveState();
@@ -1177,7 +1202,6 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
                 const y = e.clientY - rect.top;
                 const snappedY = snapToLine(y);
                 
-                // Add line to array
                 lines.push({
                     x1: tempStartX,
                     y1: tempStartY,
@@ -1208,13 +1232,7 @@ function drawPMarkers(ctx, pRegions, ventricleLineY, padding, scaleX) {
             showHelperLine = false;
             redrawCanvas();
         });
-        const sensitivitySlider = document.getElementById("sensitivitySlider");
-        const sensitivityValue = document.getElementById("sensitivityValue");
-
-        sensitivitySlider.addEventListener("input", () => {
-        sensitivityValue.textContent = sensitivitySlider.value;
-        drawECG(); // re-run ECG drawing when user changes sensitivity
-        });
     </script>
 </body>
 </html>
+                
