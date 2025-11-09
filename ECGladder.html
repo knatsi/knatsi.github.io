@@ -152,7 +152,26 @@
             align-items: center;
             gap: 10px;
         }
+        .dropZoneCSS {
+            border: 2px dashed #888;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            transition: all 0.2s ease;
+            cursor: pointer;
         
+        }
+        
+        .dropZoneCSS.dragover {
+          border-color: #0b74de;
+          background-color: #e6f2ff;
+          color: #0b74de;
+        }
+        
+        .dropZoneCSS input[type="file"] {
+          display: none;
+        }
         input[type="color"] {
             width: 50px;
             height: 40px;
@@ -186,9 +205,10 @@
         <h1>ECG Ladder Diagram Drawing Tool</h1>
         
         <div class="toolbar">
-            <div class="color-picker" id="dropZone">
-                <label>Load file (xml, pdf or image):</label>
+            <div class="dropZoneCSS","color-picker" id="dropZone">
+                <label>Drag & drop an XML, PDF, or image here<br>or click to select a file</label>
                 <input type="file" id="ecgFile" accept="image/*,.pdf,.xml" />
+            </div>
                 <div class="color-picker" id="imageVScaleSelector" style="display: none;">
                   <label>Vertical Scale: <span id="vScaleValue">100</span>%</label>
                   <input type="range" id="vScaleSlider" min="10" max="200" value="100" step="1">
@@ -213,7 +233,7 @@
                 <label>Scroll:</label>
                 <input type="range" id="scrollSlider" min="0" max="100" value="0" step="1">
             </div>
-        </div>
+        
           
 
           <div class="color-picker">
@@ -222,7 +242,7 @@
             <img id="preview" alt="Preview will appear here" style="max-width: 100%; display: block;">
             <canvas id="overlay" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
           </div>
-
+          
 
         
         </div>
@@ -369,6 +389,8 @@
         const overlay = document.getElementById('overlay');
         const pdfCanvas = document.getElementById('pdfCanvas');
         const IMGresult = document.getElementById('IMGresult');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('ecgFile');
     
         let img = null;
         let pdfPage = null;
@@ -1072,7 +1094,7 @@
 //            currentSymbol = e.target.value;
 //        });
         
-          document.getElementById('ecgFile').addEventListener('change', async function(e) {
+         fileInput.addEventListener('change', async function(e) {
               const file = e.target.files[0];
               if (!file) return;
               
@@ -1642,80 +1664,106 @@
           ctx.strokeRect(IMGstartX, IMGstartY, IMGendX - IMGstartX, IMGendY - IMGstartY);
         });
         
-overlay.addEventListener('mouseup', async e => {
-  console.log('Overlay mouseup triggered');
-  if (!IMGisDrawing) {
-    console.log('Not drawing, returning');
-    return;
-  }
-  IMGisDrawing = false;
-  const rect = overlay.getBoundingClientRect();
-  const scaleX = overlay.width / rect.width;
-  const scaleY = overlay.height / rect.height;
-  IMGendX = (e.clientX - rect.left) * scaleX;
-  IMGendY = (e.clientY - rect.top) * scaleY;
+        overlay.addEventListener('mouseup', async e => {
+          console.log('Overlay mouseup triggered');
+          if (!IMGisDrawing) {
+            console.log('Not drawing, returning');
+            return;
+          }
+          IMGisDrawing = false;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGendX = (e.clientX - rect.left) * scaleX;
+          IMGendY = (e.clientY - rect.top) * scaleY;
+        
+          const cropX = Math.min(IMGstartX, IMGendX);
+          const cropY = Math.min(IMGstartY, IMGendY);
+          const cropW = Math.abs(IMGendX - IMGstartX);
+          const cropH = Math.abs(IMGendY - IMGstartY);
+          console.log('Crop dimensions:', cropW, cropH);
+          console.log('Crop position:', cropX, cropY);
+          if (cropW === 0 || cropH === 0) return;
+        
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = cropW;
+          tempCanvas.height = cropH;
+          const tempCtx = tempCanvas.getContext('2d');
+        
+          if (img) {
+            console.log('Drawing from image');
+            tempCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          } else if (pdfPage) {
+            console.log('Drawing from PDF with scale:', pdfScale);
+            // The coordinates are already in the scaled canvas space, so we can draw directly
+            tempCtx.drawImage(pdfCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          }
+        
+          // Calculate scaling to fit within ecgHeight while maintaining aspect ratio
+          const targetHeight = ecgHeight;
+          const scale = Math.min(canvas.width / cropW, targetHeight / cropH);
+          const scaledW = cropW * scale;
+          const scaledH = cropH * scale;
+          
+          console.log('Scaled dimensions:', scaledW, scaledH);
+          
+          // Store the image data
+          ecgImage = {
+            canvas: tempCanvas,
+            width: scaledW,
+            height: scaledH,
+            originalWidth: scaledW,
+            originalHeight: scaledH
+          };
+          
+          // Reset scales to 100%
+          ecgImageHScale = 1.0;
+          ecgImageVScale = 1.0;
+          document.getElementById('hScaleSlider').value = 100;
+          document.getElementById('vScaleSlider').value = 100;
+          document.getElementById('hScaleValue').textContent = 100;
+          document.getElementById('vScaleValue').textContent = 100;
+          
+          // Show scale sliders
+          document.getElementById('imageScaleSelector').style.display = 'flex';
+         // document.getElementById('imageVScaleSelector').style.display = 'flex';
+          
+          console.log('ecgImage stored:', ecgImage);
+          
+          // Hide the preview after cropping
+          document.getElementById('preview-container').style.display = 'none';
+          clearPreview();
+          
+          // Redraw to show the image
+          console.log('Calling redrawCanvas');
+          redrawCanvas();
+        });
+        
+        // Click opens file dialog
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        // Highlight on drag
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('dragover');
+        
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            fileInput.files = files;
+            handleFiles(files);
+          }
+        });
+        
 
-  const cropX = Math.min(IMGstartX, IMGendX);
-  const cropY = Math.min(IMGstartY, IMGendY);
-  const cropW = Math.abs(IMGendX - IMGstartX);
-  const cropH = Math.abs(IMGendY - IMGstartY);
-  console.log('Crop dimensions:', cropW, cropH);
-  console.log('Crop position:', cropX, cropY);
-  if (cropW === 0 || cropH === 0) return;
-
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = cropW;
-  tempCanvas.height = cropH;
-  const tempCtx = tempCanvas.getContext('2d');
-
-  if (img) {
-    console.log('Drawing from image');
-    tempCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-  } else if (pdfPage) {
-    console.log('Drawing from PDF with scale:', pdfScale);
-    // The coordinates are already in the scaled canvas space, so we can draw directly
-    tempCtx.drawImage(pdfCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-  }
-
-  // Calculate scaling to fit within ecgHeight while maintaining aspect ratio
-  const targetHeight = ecgHeight;
-  const scale = Math.min(canvas.width / cropW, targetHeight / cropH);
-  const scaledW = cropW * scale;
-  const scaledH = cropH * scale;
-  
-  console.log('Scaled dimensions:', scaledW, scaledH);
-  
-  // Store the image data
-  ecgImage = {
-    canvas: tempCanvas,
-    width: scaledW,
-    height: scaledH,
-    originalWidth: scaledW,
-    originalHeight: scaledH
-  };
-  
-  // Reset scales to 100%
-  ecgImageHScale = 1.0;
-  ecgImageVScale = 1.0;
-  document.getElementById('hScaleSlider').value = 100;
-  document.getElementById('vScaleSlider').value = 100;
-  document.getElementById('hScaleValue').textContent = 100;
-  document.getElementById('vScaleValue').textContent = 100;
-  
-  // Show scale sliders
-  document.getElementById('imageScaleSelector').style.display = 'flex';
- // document.getElementById('imageVScaleSelector').style.display = 'flex';
-  
-  console.log('ecgImage stored:', ecgImage);
-  
-  // Hide the preview after cropping
-  document.getElementById('preview-container').style.display = 'none';
-  clearPreview();
-  
-  // Redraw to show the image
-  console.log('Calling redrawCanvas');
-  redrawCanvas();
-});
 
     </script>
 </body>
