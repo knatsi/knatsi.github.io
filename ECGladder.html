@@ -94,13 +94,15 @@
             border-radius: 4px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             z-index: 10;
-            min-width: 120px;
+            min-width: auto;
+            width: max-content;
         }
         
         .dropdown-menu div {
-            padding: 8px 12px;
+            padding: 10px 15px;
             cursor: pointer;
             font-size: 14px;
+            white-space: nowrap;
         }
         
         .dropdown-menu div:hover {
@@ -109,7 +111,7 @@
         .line-width-control {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 1px;
         }
         
         #lineWidthSlider {
@@ -257,16 +259,17 @@
               </div>
           </div>
             
-            <div class="color-picker">
-                <label>Color:</label>
-                <input type="color" id="colorPicker" value="#000000">
-            </div>
-            
-            <div class="line-width-control">
-                <label for="lineWidthSlider">Line Width:</label>
-                <input type="range" id="lineWidth" min="1" max="10" value="2">
-            </div>
-            
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="color-picker">
+                  <label>Color:</label>
+                  <input type="color" id="colorPicker" value="#000000" style="width: 40px; height: 25px;">
+              </div>
+              
+              <div class="line-width-control">
+                  <label for="lineWidthSlider">Line Width:</label>
+                  <input type="range" id="lineWidth" min="1" max="10" value="2">
+              </div>
+          </div>
             <button id="undo" titel="Undo"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo-icon lucide-undo"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
             <button id="clear" class="clear" title="Clear All"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo2-icon lucide-undo-2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button></button>
             <button id="saveImageBtn" title="Save Image"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
