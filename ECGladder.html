@@ -20,7 +20,7 @@
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1240px;
             margin: 0 auto;
             background: white;
             padding: 20px;
@@ -186,7 +186,7 @@
         <h1>ECG Ladder Diagram Drawing Tool</h1>
         
         <div class="toolbar">
-            <div class="color-picker">
+            <div class="color-picker" id="dropZone">
                 <label>Load file (xml, pdf or image):</label>
                 <input type="file" id="ecgFile" accept="image/*,.pdf,.xml" />
                 <div class="color-picker" id="imageVScaleSelector" style="display: none;">
@@ -282,7 +282,7 @@
         </div>
         
         <div class="info">
-            <strong>Instructions:</strong> Click and drag to draw. The ladder shows three chambers: Atria (A), AV Node (AV), and Ventricles (V). Use different tools to create your ECG ladder diagram showing electrical conduction paths.
+            <strong>Instructions:</strong> Click and drag to draw. Use different tools to create your ECG ladder diagram showing electrical conduction paths. Use Shift + Drag to select and then copy (Ctr + c), paste (Ctr + v) and delete (Del). <br> Use Ctr + drag to meassure (calibrated for xml ecg files). 
         </div>
     </div>
 
@@ -365,18 +365,18 @@
         ];
         
         //PDF/Img constants
-            const preview = document.getElementById('preview');
-            const overlay = document.getElementById('overlay');
-            const pdfCanvas = document.getElementById('pdfCanvas');
-            const IMGresult = document.getElementById('IMGresult');
-        
-            let img = null;
-            let pdfPage = null;
-            let pdfScale = 1;
-            let IMGstartX, IMGstartY, IMGendX, IMGendY, IMGisDrawing = false;
-            let ecgImage = null; // Store the cropped ECG image
-            let ecgImageHScale = 1.0;
-            let ecgImageVScale = 1.0;
+        const preview = document.getElementById('preview');
+        const overlay = document.getElementById('overlay');
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const IMGresult = document.getElementById('IMGresult');
+    
+        let img = null;
+        let pdfPage = null;
+        let pdfScale = 1;
+        let IMGstartX, IMGstartY, IMGendX, IMGendY, IMGisDrawing = false;
+        let ecgImage = null; // Store the cropped ECG image
+        let ecgImageHScale = 1.0;
+        let ecgImageVScale = 1.0;
             
             
         
@@ -855,31 +855,31 @@
             });
         }
 
-function drawGrid() {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw gray background for ECG area FIRST
-    ctx.fillStyle = '#f0f0f0';
-    ctx.fillRect(0, 0, canvas.width, ecgHeight);
-    
-    // Draw the ECG image on top if it exists
-    if (ecgImage) {
-        console.log('Drawing ecgImage:', ecgImage.width, ecgImage.height);
-        ctx.drawImage(ecgImage.canvas, 0, 0, ecgImage.canvas.width, ecgImage.canvas.height, 
-                      0, 0, ecgImage.width, ecgImage.height);
-    }
-    
-    ctx.fillStyle = '#333333';
-    ctx.font = 'bold 16px Arial';
-    ctx.textBaseline = 'top';
-    ctx.fillText('ECG', 10, 10);
-    
-    if (currentLead && ecgData) {
-        drawECG();
-    }
-
+        function drawGrid() {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Draw gray background for ECG area FIRST
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, ecgHeight);
+            
+            // Draw the ECG image on top if it exists
+            if (ecgImage) {
+                console.log('Drawing ecgImage:', ecgImage.width, ecgImage.height);
+                ctx.drawImage(ecgImage.canvas, 0, 0, ecgImage.canvas.width, ecgImage.canvas.height, 
+                              0, 0, ecgImage.width, ecgImage.height);
+            }
+            
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textBaseline = 'top';
+            ctx.fillText('ECG', 10, 10);
+            
+            if (currentLead && ecgData) {
+                drawECG();
+            }
+        
+                    
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -1275,7 +1275,7 @@ function drawGrid() {
                 return;
             }
             
-            if (pastingMode && y >= ladderHeight) {
+            if (pastingMode && y >= ecgHeight) {
                 const dx = lastMouseX - pasteReferenceX;
             
                 pastePreview.lines.forEach(line => {
@@ -1704,7 +1704,7 @@ overlay.addEventListener('mouseup', async e => {
   
   // Show scale sliders
   document.getElementById('imageScaleSelector').style.display = 'flex';
-  document.getElementById('imageVScaleSelector').style.display = 'flex';
+ // document.getElementById('imageVScaleSelector').style.display = 'flex';
   
   console.log('ecgImage stored:', ecgImage);
   
