@@ -185,8 +185,16 @@
         
         <div class="toolbar">
             <div class="color-picker">
-                <label>Load ECG XML:</label>
+                <label>Load file (xml, pdf or image):</label>
                 <input type="file" id="ecgFile" accept="image/*,.pdf,.xml" />
+                <div class="color-picker" id="imageVScaleSelector" style="display: none;">
+                  <label>Vertical Scale: <span id="vScaleValue">100</span>%</label>
+                  <input type="range" id="vScaleSlider" min="10" max="200" value="100" step="1">
+                </div>
+                <div class="color-picker" id="imageScaleSelector" style="display: none;">
+                  <label>Horizontal Scale: <span id="hScaleValue">100</span>%</label>
+                  <input type="range" id="hScaleSlider" min="10" max="200" value="100" step="1">
+                </div>
             </div>
             
             <div class="color-picker" id="leadSelector" style="display: none;">
@@ -205,21 +213,16 @@
             </div>
         </div>
           
-        <div class="toolbar">
-          <div id="preview-container" style="display: none; position: relative; display: inline-block;">
+
+          <div class="color-picker">
+          <div id="preview-container" style="position: relative; display: none;">
             <canvas id="pdfCanvas" style="max-width: 100%; display: block;"></canvas>
             <img id="preview" alt="Preview will appear here" style="max-width: 100%; display: block;">
             <canvas id="overlay" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
           </div>
-          <div class="color-picker" id="imageScaleSelector" style="display: none;">
-              <label>Horizontal Scale: <span id="hScaleValue">100</span>%</label>
-              <input type="range" id="hScaleSlider" min="10" max="200" value="100" step="1">
-          </div>
-          
-          <div class="color-picker" id="imageVScaleSelector" style="display: none;">
-              <label>Vertical Scale: <span id="vScaleValue">100</span>%</label>
-              <input type="range" id="vScaleSlider" min="10" max="200" value="100" step="1">
-          </div>
+
+
+        
         </div>
         
         <div class="toolbar">
@@ -1192,11 +1195,7 @@ function drawGrid() {
         });
         
         document.getElementById('clear').addEventListener('click', function() {
-            lines = [];
-            symbols = [];
-            drawGrid();
-            history = [];
-            saveState();
+          location.reload();
         });
         
         document.getElementById('saveImageBtn').addEventListener('click', () => {
