@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ECG Ladder Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -183,6 +184,45 @@
         <h1>ECG Ladder Diagram Drawing Tool</h1>
         
         <div class="toolbar">
+            <div class="color-picker">
+                <label>Load ECG XML:</label>
+                <input type="file" id="ecgFile" accept="image/*,.pdf,.xml" />
+            </div>
+            
+            <div class="color-picker" id="leadSelector" style="display: none;">
+                <label>Select Lead:</label>
+                <select id="leadDropdown"></select>
+            </div>
+            
+            <div class="color-picker" id="speedSelector" style="display: none;">
+                <label>ECG Speed: <span id="speedValue">25</span> mm/s</label>
+                <input type="range" id="speedSlider" min="0" max="3" value="1" step="1">
+            </div>
+            
+            <div class="color-picker" id="scrollSelector" style="display: none;">
+                <label>Scroll:</label>
+                <input type="range" id="scrollSlider" min="0" max="100" value="0" step="1">
+            </div>
+        </div>
+          
+        <div class="toolbar">
+          <div id="preview-container" style="display: none; position: relative; display: inline-block;">
+            <canvas id="pdfCanvas" style="max-width: 100%; display: block;"></canvas>
+            <img id="preview" alt="Preview will appear here" style="max-width: 100%; display: block;">
+            <canvas id="overlay" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
+          </div>
+          <div class="color-picker" id="imageScaleSelector" style="display: none;">
+              <label>Horizontal Scale: <span id="hScaleValue">100</span>%</label>
+              <input type="range" id="hScaleSlider" min="10" max="200" value="100" step="1">
+          </div>
+          
+          <div class="color-picker" id="imageVScaleSelector" style="display: none;">
+              <label>Vertical Scale: <span id="vScaleValue">100</span>%</label>
+              <input type="range" id="vScaleSlider" min="10" max="200" value="100" step="1">
+          </div>
+        </div>
+        
+        <div class="toolbar">
             <button id="drawLine" class="active" title="Draw Line">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line">
               <path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button>
@@ -229,27 +269,7 @@
             <button id="saveImageBtn" title="Save Image"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
         </div>
         
-        <div class="toolbar">
-            <div class="color-picker">
-                <label>Load ECG XML:</label>
-                <input type="file" id="ecgFile" accept=".xml">
-            </div>
-            
-            <div class="color-picker" id="leadSelector" style="display: none;">
-                <label>Select Lead:</label>
-                <select id="leadDropdown"></select>
-            </div>
-            
-            <div class="color-picker" id="speedSelector" style="display: none;">
-                <label>ECG Speed: <span id="speedValue">25</span> mm/s</label>
-                <input type="range" id="speedSlider" min="0" max="3" value="1" step="1">
-            </div>
-            
-            <div class="color-picker" id="scrollSelector" style="display: none;">
-                <label>Scroll:</label>
-                <input type="range" id="scrollSlider" min="0" max="100" value="0" step="1">
-            </div>
-        </div>
+
         
         <div class="canvas-container">
             <canvas id="canvas" width="1200" height="450"></canvas>
@@ -337,6 +357,22 @@
             canvas.height - halfStepV,
             canvas.height
         ];
+        
+        //PDF/Img constants
+            const preview = document.getElementById('preview');
+            const overlay = document.getElementById('overlay');
+            const pdfCanvas = document.getElementById('pdfCanvas');
+            const IMGresult = document.getElementById('IMGresult');
+        
+            let img = null;
+            let pdfPage = null;
+            let pdfScale = 1;
+            let IMGstartX, IMGstartY, IMGendX, IMGendY, IMGisDrawing = false;
+            let ecgImage = null; // Store the cropped ECG image
+            let ecgImageHScale = 1.0;
+            let ecgImageVScale = 1.0;
+            
+            
         
         function snapToLine(y) {
             let closest = snapLines[0];
@@ -788,6 +824,8 @@
             ctx.restore();
         }
         
+
+        
         function selectLadderElements() {
             if (!selection) return;
         
@@ -811,21 +849,30 @@
             });
         }
 
-        function drawGrid() {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = '#f0f0f0';
-            ctx.fillRect(0, 0, canvas.width, ecgHeight);
-            
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 16px Arial';
-            ctx.textBaseline = 'top';
-            ctx.fillText('ECG', 10, 10);
-            
-            if (currentLead && ecgData) {
-                drawECG();
-            }
+function drawGrid() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw gray background for ECG area FIRST
+    ctx.fillStyle = '#f0f0f0';
+    ctx.fillRect(0, 0, canvas.width, ecgHeight);
+    
+    // Draw the ECG image on top if it exists
+    if (ecgImage) {
+        console.log('Drawing ecgImage:', ecgImage.width, ecgImage.height);
+        ctx.drawImage(ecgImage.canvas, 0, 0, ecgImage.canvas.width, ecgImage.canvas.height, 
+                      0, 0, ecgImage.width, ecgImage.height);
+    }
+    
+    ctx.fillStyle = '#333333';
+    ctx.font = 'bold 16px Arial';
+    ctx.textBaseline = 'top';
+    ctx.fillText('ECG', 10, 10);
+    
+    if (currentLead && ecgData) {
+        drawECG();
+    }
+
             
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
@@ -957,6 +1004,14 @@
             selection = null;
         }
         
+        function clearPreview() {
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          pdfCanvas.width = pdfCanvas.height = 0;
+          preview.src = '';
+          IMGresult.width = IMGresult.height = 0;
+        }
+        
         drawGrid();
         saveState();
         
@@ -975,6 +1030,23 @@
             this.classList.add('active');
             canvas.style.cursor = 'default';
         });
+        document.getElementById('hScaleSlider').addEventListener('input', function(e) {
+            ecgImageHScale = parseInt(e.target.value) / 100;
+            document.getElementById('hScaleValue').textContent = e.target.value;
+            if (ecgImage) {
+                ecgImage.width = ecgImage.originalWidth * ecgImageHScale;
+            }
+            redrawCanvas();
+        });
+        
+        document.getElementById('vScaleSlider').addEventListener('input', function(e) {
+            ecgImageVScale = parseInt(e.target.value) / 100;
+            document.getElementById('vScaleValue').textContent = e.target.value;
+            if (ecgImage) {
+                ecgImage.height = ecgImage.originalHeight * ecgImageVScale;
+            }
+            redrawCanvas();
+        });
         
  //       document.getElementById('drawDot').addEventListener('click', function() {
 ///            currentTool = 'dot';
@@ -990,41 +1062,83 @@
 //            currentSymbol = e.target.value;
 //        });
         
-        document.getElementById('ecgFile').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const xmlText = event.target.result;
-                const result = parseECGXML(xmlText);
-                
-                if (result.leads.length > 0) {
-                    ecgData = result.data;
-                    ecgLeads = result.leads;
-                    
-                    const dropdown = document.getElementById('leadDropdown');
-                    dropdown.innerHTML = '';
-                    ecgLeads.forEach(lead => {
-                        const option = document.createElement('option');
-                        option.value = lead;
-                        option.textContent = lead;
-                        dropdown.appendChild(option);
-                    });
-                    
-                    currentLead = ecgLeads[0];
-                    document.getElementById('leadSelector').style.display = 'flex';
-                    document.getElementById('speedSelector').style.display = 'flex';
-                    document.getElementById('scrollSelector').style.display = 'flex';
-                    document.getElementById('scrollSlider').value = 0;
-                      ecgScrollOffset = 0;
-                    redrawCanvas();
-                } else {
-                    alert('No valid ECG leads found in the XML file.');
-                }
-            };
-            reader.readAsText(file);
-        });
+          document.getElementById('ecgFile').addEventListener('change', async function(e) {
+              const file = e.target.files[0];
+              if (!file) return;
+              
+              // Handle images
+              if (file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = function(event) {
+                      img = new Image();
+                      img.onload = () => {
+                          document.getElementById('preview-container').style.display = 'inline-block';
+                          pdfCanvas.style.display = 'none';
+                          preview.style.display = 'block';
+                          overlay.width = img.width;
+                          overlay.height = img.height;
+                          preview.src = img.src;
+                      };
+                      img.src = event.target.result;
+                  };
+                  reader.readAsDataURL(file);
+              }
+              // Handle PDFs
+              else if (file.type === 'application/pdf') {
+                  document.getElementById('preview-container').style.display = 'inline-block';
+                  pdfCanvas.style.display = 'block';
+                  preview.style.display = 'none';
+                  const arrayBuffer = await file.arrayBuffer();
+                  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                  pdfPage = await pdf.getPage(1);
+                  const viewport = pdfPage.getViewport({ scale: 2 });
+                  pdfScale = 2;
+              
+                  pdfCanvas.width = viewport.width;
+                  pdfCanvas.height = viewport.height;
+                  overlay.width = viewport.width;
+                  overlay.height = viewport.height;
+              
+                  const pdfCtx = pdfCanvas.getContext('2d');
+                  await pdfPage.render({ canvasContext: pdfCtx, viewport }).promise;
+              }
+              // Handle XML (original ECG functionality)
+              else if (file.type === 'text/xml' || file.name.endsWith('.xml')) {
+                  const reader = new FileReader();
+                  reader.onload = function(event) {
+                      const xmlText = event.target.result;
+                      const result = parseECGXML(xmlText);
+                      
+                      if (result.leads.length > 0) {
+                          ecgData = result.data;
+                          ecgLeads = result.leads;
+                          
+                          const dropdown = document.getElementById('leadDropdown');
+                          dropdown.innerHTML = '';
+                          ecgLeads.forEach(lead => {
+                              const option = document.createElement('option');
+                              option.value = lead;
+                              option.textContent = lead;
+                              dropdown.appendChild(option);
+                          });
+                          
+                          currentLead = ecgLeads[0];
+                          document.getElementById('leadSelector').style.display = 'flex';
+                          document.getElementById('speedSelector').style.display = 'flex';
+                          document.getElementById('scrollSelector').style.display = 'flex';
+                          document.getElementById('scrollSlider').value = 0;
+                          ecgScrollOffset = 0;
+                          redrawCanvas();
+                      } else {
+                          alert('No valid ECG leads found in the XML file.');
+                      }
+                  };
+                  reader.readAsText(file);
+              }
+              else {
+                  alert('Please select an image, PDF, or XML file.');
+              }
+          });
         
         document.getElementById('leadDropdown').addEventListener('change', function(e) {
             currentLead = e.target.value;
@@ -1487,6 +1601,103 @@
         
         document.addEventListener('click', () => {
             symbolMenu.style.display = 'none';
+        });
+        
+        overlay.addEventListener('mousedown', e => {
+          IMGisDrawing = true;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGstartX = (e.clientX - rect.left) * scaleX;
+          IMGstartY = (e.clientY - rect.top) * scaleY;
+        });
+        
+        overlay.addEventListener('mousemove', e => {
+          if (!IMGisDrawing) return;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGendX = (e.clientX - rect.left) * scaleX;
+          IMGendY = (e.clientY - rect.top) * scaleY;
+        
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(IMGstartX, IMGstartY, IMGendX - IMGstartX, IMGendY - IMGstartY);
+        });
+        
+        overlay.addEventListener('mouseup', async e => {
+          console.log('Overlay mouseup triggered');
+          if (!IMGisDrawing) {
+            console.log('Not drawing, returning');
+            return;
+          }
+          IMGisDrawing = false;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGendX = (e.clientX - rect.left) * scaleX;
+          IMGendY = (e.clientY - rect.top) * scaleY;
+        
+          const cropX = Math.min(IMGstartX, IMGendX);
+          const cropY = Math.min(IMGstartY, IMGendY);
+          const cropW = Math.abs(IMGendX - IMGstartX);
+          const cropH = Math.abs(IMGendY - IMGstartY);
+          console.log('Crop dimensions:', cropW, cropH);
+          if (cropW === 0 || cropH === 0) return;
+        
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = cropW;
+          tempCanvas.height = cropH;
+          const tempCtx = tempCanvas.getContext('2d');
+        
+          if (img) {
+            console.log('Drawing from image');
+            tempCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          } else if (pdfPage) {
+            console.log('Drawing from PDF');
+            tempCtx.drawImage(pdfCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          }
+        
+          // Calculate scaling to fit within ecgHeight while maintaining aspect ratio
+          const targetHeight = ecgHeight;
+          const scale = Math.min(canvas.width / cropW, targetHeight / cropH);
+          const scaledW = cropW * scale;
+          const scaledH = cropH * scale;
+          
+          console.log('Scaled dimensions:', scaledW, scaledH);
+          
+          // Store the image data
+          ecgImage = {
+            canvas: tempCanvas,
+            width: scaledW,
+            height: scaledH,
+            originalWidth: scaledW,
+            originalHeight: scaledH
+          };
+          
+          // Reset scales to 100%
+          ecgImageHScale = 1.0;
+          ecgImageVScale = 1.0;
+          document.getElementById('hScaleSlider').value = 100;
+          document.getElementById('vScaleSlider').value = 100;
+          document.getElementById('hScaleValue').textContent = 100;
+          document.getElementById('vScaleValue').textContent = 100;
+          
+          // Show scale sliders
+          document.getElementById('imageScaleSelector').style.display = 'flex';
+        //  document.getElementById('imageVScaleSelector').style.display = 'flex';
+          
+          console.log('ecgImage stored:', ecgImage);
+          
+          // Hide the preview after cropping
+          document.getElementById('preview-container').style.display = 'none';
+          clearPreview();
+          
+          // Redraw to show the image
+          console.log('Calling redrawCanvas');
+          redrawCanvas();
         });
 
     </script>
