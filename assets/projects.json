@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ecg-visualizer",
+    "title": "ECG Rhythm Visualizer",
+    "description": "Interactive JavaScript web app that plots ECG waveform data from RhythmLead XML files.",
+    "tags": ["JavaScript", "ECG", "Visualization"],
+    "image": "assets/images/ecg-visualizer.png",
+    "link": "project-details.html?id=ecg-visualizer",
+    "github": "https://github.com/YourUser/ECG-Visualizer",
+    "date": "2025-08-07"
+  },
+  {
+    "id": "structured-data-api",
+    "title": "Structured Data Web API",
+    "description": "C# Web API integrating with Orthanc and Sectra to extract and serve structured DICOM SR measurement data.",
+    "tags": ["C#", "API", "DICOM", "Healthcare"],
+    "image": "assets/images/structured-data-api.png",
+    "link": "project-details.html?id=structured-data-api",
+    "github": "https://github.com/YourUser/StructuredDataAPI",
+    "date": "2025-07-17"
+  },
+  {
+    "id": "xml-to-json",
+    "title": "XML to JSON Converter",
+    "description": "Lightweight C# service that parses MeasurementExport XML files and outputs structured JSON.",
+    "tags": ["C#", "XML", "JSON"],
+    "image": "assets/images/xml-to-json.png",
+    "link": "project-details.html?id=xml-to-json",
+    "github": "https://github.com/YourUser/XML-to-JSON",
+    "date": "2025-05-28"
+  },
+  {
+    "id": "rental-webapp",
+    "title": "Item Rental Webpage",
+    "description": "Modern web interface for listing and requesting items for rent with live email integration.",
+    "tags": ["HTML", "JavaScript", "UI"],
+    "image": "assets/images/rental-webapp.png",
+    "link": "project-details.html?id=rental-webapp",
+    "github": "https://github.com/YourUser/RentalWebApp",
+    "date": "2025-03-03"
+  }
+]
