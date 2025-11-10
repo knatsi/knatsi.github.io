@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KnaTsi Project Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white shadow-md">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+      <a href="index.html" class="text-2xl font-bold text-teal-600">KnaTsi</a>
+      <nav class="space-x-6 font-medium">
+        <a href="index.html" class="hover:text-teal-600">Home</a>
+        <a href="projects.html" class="hover:text-teal-600">Projects</a>
+        <a href="about.html" class="hover:text-teal-600">About</a>
+        <a href="contact.html" class="hover:text-teal-600">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Project Section -->
+  <main class="flex-grow max-w-6xl mx-auto px-4 py-12">
+    <div id="project-details" class="animate-fadeIn"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-gray-300 py-6 mt-auto">
+    <div class="max-w-6xl mx-auto text-center">
+      <p>© 2025 <span class="text-teal-400 font-semibold">KnaTsi</span>. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+  // Load shared navbar
+  fetch('navbar.html')
+    .then(res => res.text())
+    .then(html => {
+      document.getElementById('navbar').innerHTML = html;
+    })
+    .catch(err => console.error('Failed to load navbar:', err));
+    
+    
+    // Extract project ID from URL (e.g., ?id=ecg-visualizer)
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get("id");
+
+    // Load JSON and find matching project
+    fetch("projects.json")
+      .then(res => res.json())
+      .then(projects => {
+        const project = projects.find(p => p.id === projectId);
+        const container = document.getElementById("project-details");
+
+        if (!project) {
+          container.innerHTML = `
+            <div class="text-center py-20">
+              <h1 class="text-4xl font-bold text-gray-600 mb-4">Project not found</h1>
+              <a href="projects.html" class="text-teal-600 hover:underline">← Back to projects</a>
+            </div>`;
+          return;
+        }
+
+        // Render project details
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl shadow p-8">
+            <img src="${project.image}" alt="${project.title}" class="rounded-xl w-full max-h-96 object-cover mb-6">
+            <h1 class="text-4xl font-bold text-teal-600 mb-4">${project.title}</h1>
+            <p class="text-gray-700 text-lg mb-6">${project.description}</p>
+
+            <div class="flex flex-wrap gap-2 mb-6">
+              ${project.tags.map(tag => `
+                <span class="bg-teal-100 text-teal-700 text-sm px-3 py-1 rounded-full">${tag}</span>
+              `).join('')}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4">
+              ${project.github ? `<a href="${project.github}" target="_blank" class="bg-gray-800 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">View on GitHub</a>` : ''}
+              <a href="projects.html" class="text-teal-600 font-medium hover:underline">← Back to all projects</a>
+            </div>
+
+            <p class="text-gray-400 text-sm mt-6">Last updated: ${project.date}</p>
+          </div>
+        `;
+      })
+      .catch(err => {
+        console.error(err);
+        document.getElementById("project-details").innerHTML = `
+          <div class="text-center py-20 text-red-600">Error loading project data.</div>`;
+      });
+  </script>
+</body>
+</html>
