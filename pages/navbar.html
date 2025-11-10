@@ -1,0 +1,48 @@
+<!-- navbar.html -->
+<header class="fixed top-0 left-0 w-full bg-white shadow-md z-50">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+    <!-- Logo -->
+    <a href="index.html" class="flex items-center space-x-2">
+          
+      <img src="https://uploads.onecompiler.io/443n647cm/443shrx6z/logo1(2).png" alt="KnaTsi Logo" class="w-50 h-10">
+    </a>
+
+    <!-- Desktop Nav -->
+    <nav class="hidden md:flex space-x-6 font-medium text-[#32323F]">
+      <a href="index.html" class="hover:text-[#BCABA8]">Home</a>
+      <a href="projects.html" class="hover:text-[#BCABA8]">Projects</a>
+      <a href="about.html" class="hover:text-[#BCABA8]">About</a>
+      <a href="contact.html" class="hover:text-[#BCABA8]">Contact</a>
+    </nav>
+
+    <!-- Mobile Menu Button -->
+    <button id="menu-toggle" class="md:hidden focus:outline-none">
+      <svg class="w-6 h-6 text-[#32323F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden bg-white border-t border-gray-200 md:hidden">
+    <nav class="flex flex-col items-center space-y-2 py-3 font-medium text-[#32323F]">
+      <a href="index.html" class="hover:text-[#BCABA8]">Home</a>
+      <a href="projects.html" class="hover:text-[#BCABA8]">Projects</a>
+      <a href="about.html" class="hover:text-[#BCABA8]">About</a>
+      <a href="contact.html" class="hover:text-[#BCABA8]">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  // Mobile menu toggle logic
+  document.addEventListener("DOMContentLoaded", () => {
+    const toggle = document.getElementById("menu-toggle");
+    const menu = document.getElementById("mobile-menu");
+
+    toggle.addEventListener("click", () => {
+      menu.classList.toggle("hidden");
+    });
+  });
+</script>
