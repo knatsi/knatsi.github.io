@@ -1,12 +1,12 @@
 [
   {
-    "id": "ecg-visualizer",
-    "title": "ECG Rhythm Visualizer",
-    "description": "Interactive JavaScript web app that plots ECG waveform data from RhythmLead XML files.",
+    "id": "ecg-ladder",
+    "title": "ECG Ladder Diagram",
+    "description": "Online ECG Ladder Diagram Drawer",
     "tags": ["JavaScript", "ECG", "Visualization"],
     "image": "assets/images/ecg-visualizer.png",
-    "link": "project-details.html?id=ecg-visualizer",
-    "github": "https://github.com/YourUser/ECG-Visualizer",
+    "link": "project-details.html?id=ecg-ladder",
+    "github": "https://knatsi.github.io/ECGladder.html",
     "date": "2025-08-07"
   },
   {
