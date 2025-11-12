@@ -29,7 +29,7 @@
     const projectId = params.get("id");
 
     // Load JSON and find project
-    fetch("projects.json")
+    fetch("../assets/projects.json")
       .then(res => res.json())
       .then(projects => {
         const project = projects.find(p => p.id === projectId);
