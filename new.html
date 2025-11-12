@@ -1,70 +1,46 @@
-<!-- navbar.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KnaTsi</title>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Ensure links open inside the content iframe -->
-  <base target="content-frame">
-
-  <style>
-    /* Prevent scrollbars and remove body margin inside iframe */
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-  </style>
+  <link rel="icon" href="assets/image/logo.png" />
 </head>
-<body>
-  <header class="w-full bg-white shadow-md z-50">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-      
-      <!-- Logo -->
-      <a href="pages/main.html" class="flex items-center space-x-2">
-        <img src="assets/image/logo1(2).png" alt="KnaTsi Logo" class="h-10">
-      </a>
+<body class="flex flex-col h-screen bg-gray-50 text-[#32323F]">
 
-      <!-- Desktop Nav -->
-      <nav class="hidden md:flex space-x-6 font-medium text-[#32323F]">
-        <a href="pages/main.html" class="hover:text-[#BCABA8]">Home</a>
-        <a href="pages/projects.html" class="hover:text-[#BCABA8]">Projects</a>
-        <a href="pages/about.html" class="hover:text-[#BCABA8]">About</a>
-        <a href="pages/contact.html" class="hover:text-[#BCABA8]">Contact</a>
-      </nav>
+  <!-- Navbar Frame -->
+  <iframe 
+    id="navbar-frame"
+    src="pages/navbar.html"
+    class="w-full h-20 border-none shadow-md z-50"
+    scrolling="no">
+  </iframe>
 
-      <!-- Mobile Menu Button -->
-      <button id="menu-toggle" class="md:hidden focus:outline-none">
-        <svg class="w-6 h-6 text-[#32323F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-    </div>
+  <!-- Main Content Frame -->
+  <iframe 
+    id="content-frame"
+    src="pages/main.html"
+    class="flex-grow w-full border-none"
+    name="content-frame">
+  </iframe>
 
-    <!-- Mobile Menu -->
-    <div id="mobile-menu" class="hidden bg-white border-t border-gray-200 md:hidden">
-      <nav class="flex flex-col items-center space-y-2 py-3 font-medium text-[#32323F]">
-        <a href="pages/main.html" class="hover:text-[#BCABA8]">Home</a>
-        <a href="pages/projects.html" class="hover:text-[#BCABA8]">Projects</a>
-        <a href="pages/about.html" class="hover:text-[#BCABA8]">About</a>
-        <a href="pages/contact.html" class="hover:text-[#BCABA8]">Contact</a>
-      </nav>
-    </div>
-  </header>
+  <!-- Footer (optional fixed footer outside frames) -->
+  <footer class="bg-[#32323F] text-[#BCABA8] py-3 text-center">
+    <p>© 2025 <span class="text-[#DDD5D0] font-semibold">KnaTsi</span>. All rights reserved.</p>
+  </footer>
 
   <script>
-    // Mobile menu toggle logic
-    document.addEventListener("DOMContentLoaded", () => {
-      const toggle = document.getElementById("menu-toggle");
-      const menu = document.getElementById("mobile-menu");
-
-      toggle.addEventListener("click", () => {
-        menu.classList.toggle("hidden");
-      });
-    });
+    // Automatically resize content frame to fill viewport minus navbar & footer
+    const resizeContent = () => {
+      const navbarHeight = document.getElementById('navbar-frame').offsetHeight;
+      const footerHeight = document.querySelector('footer').offsetHeight;
+      document.getElementById('content-frame').style.height =
+        `${window.innerHeight - navbarHeight - footerHeight}px`;
+    };
+    window.addEventListener('resize', resizeContent);
+    window.addEventListener('load', resizeContent);
   </script>
 </body>
 </html>
+
