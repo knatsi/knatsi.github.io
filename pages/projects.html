@@ -9,11 +9,6 @@
 </head>
 <body class="bg-gray-50 text-[#32323F] flex flex-col min-h-screen">
 
-  <!-- Navbar -->
-  <div id="navbar"></div>
-  <div class="pt-20"></div> <!-- offset for fixed navbar -->
-
-
   <!-- Hero -->
   <section class="text-center bg-[#32323F] text-gray-300 py-10">
     <h1 class="text-5xl text-[#DDD5D0] font-extrabold mb-4">All Projects</h1>
@@ -36,14 +31,7 @@
 
   <!-- Script -->
   <script>
-  // Load shared navbar
-  fetch('pages/navbar.html')
-    .then(res => res.text())
-    .then(html => {
-      document.getElementById('navbar').innerHTML = html;
-    })
-    .catch(err => console.error('Failed to load navbar:', err));
-    
+
     // Load all projects dynamically
     fetch('assets/projects.json')
       .then(res => res.json())
