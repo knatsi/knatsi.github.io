@@ -37,7 +37,7 @@
  // Load projects and feature the 3 most viewed
   // Load both: your project list + global view counts
   Promise.all([
-    fetch('assets/projects.json').then(res => res.json()),
+    fetch('../assets/projects.json').then(res => res.json()),
     fetch('https://knatsi.github.io/smtp2go-relay/data/views.json').then(res => res.json())
   ])
   .then(([projects, views]) => {
