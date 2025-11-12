@@ -35,19 +35,15 @@
 <script>
   // Hex Codes: #32323F, #4C4E5D, #988E96, #BCABA8, #DDD5D0
  // Load projects and feature the 3 most viewed
-  fetch('../assets/projects.json')
-    .then(res => res.json())
-    .then(projects => {
-      // Add view count from localStorage
-      projects.forEach(p => {
-        const key = `project_views_${p.id}`;
-        p.views = parseInt(localStorage.getItem(key) || "0", 10);
-      });
+  fetch('https://knatsi.github.io/smtp2go-relay/data/views.json')
+  .then(res => res.json())
+  .then(views => {
+    // attach views to your projects
+    projects.forEach(p => {
+      p.views = views[p.id] || 0;
+    });
 
-      // Sort by most viewed
-      projects.sort((a, b) => b.views - a.views);
-
-      // Take top 3
+    projects.sort((a, b) => b.views - a.views);
       const featured = projects.slice(0, 3);
       const container = document.getElementById('featured-projects');
 
