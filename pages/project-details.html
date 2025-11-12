@@ -58,11 +58,19 @@
         document.getElementById("project-viewer").innerHTML = `
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
-    if (projectId) {
-      const key = `project_views_${projectId}`;
-      const current = parseInt(localStorage.getItem(key) || "0", 10);
-      localStorage.setItem(key, current + 1);
-    }
+      if (projectId) {
+        fetch("https://api.github.com/repos/knatsi/knatsi.github.io/actions/workflows/update-views.yml/dispatches", {
+          method: "POST",
+          headers: {
+            "Accept": "application/vnd.github+json",
+            "Authorization": "Bearer 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",
+          },
+          body: JSON.stringify({
+            ref: "main", // or your default branch
+            inputs: { project_id: projectId }
+          })
+        });
+      }
   </script>
 </body>
 </html>
