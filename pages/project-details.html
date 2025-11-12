@@ -59,18 +59,15 @@
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
       if (projectId) {
-        fetch("https://api.github.com/repos/knatsi/smtp2go-relay/actions/workflows/update-views.yml/dispatches", {
+        fetch("https://api.github.com/repos/knatsi/smtp2go-relay/issues/1/comments", {
           method: "POST",
           headers: {
             "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer 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",
           },
-          body: JSON.stringify({
-            ref: "main", // or your default branch
-            inputs: { project_id: projectId }
-          })
-        });
+          body: JSON.stringify({ body: `view:${projectId}` })
+        }).catch(err => console.error("View log failed:", err));
       }
+      
   </script>
 </body>
 </html>
