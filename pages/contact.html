@@ -67,7 +67,7 @@
   
   <script>
   // Load shared navbar
-  fetch('navbar.html')
+  fetch('pages/navbar.html')
     .then(res => res.text())
     .then(html => {
       document.getElementById('navbar').innerHTML = html;
@@ -93,18 +93,7 @@
       replyTo: email,
       icsContent: `Name: ${name}\nEmail: ${email}\n\n${message}`
     };
-    
-          //... backend...
-      
-      //  const recipients = {
-      //  contact: "you@knatsi.com",
-  //      feedback: "feedback@knatsi.com"
-  //      };
-  
-    //    const to = recipients[req.body.form] || "you@knatsi.com";
-
-
-    try {
+        try {
       const res = await fetch("https://knatsi.synology.me/send-form", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
