@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KnaTsi | Projects</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="assets/images/logo.png" />
+  <link rel="icon" href="../assets/images/logo.png" />
 </head>
 <body class="bg-gray-50 text-[#32323F] flex flex-col min-h-screen">
 
@@ -37,7 +37,7 @@
   <!-- Script -->
   <script>
     // Load all projects dynamically
-    fetch('assets/projects.json')
+    fetch('../assets/projects.json')
       .then(res => res.json())
       .then(projects => {
         const grid = document.getElementById('project-grid');
