@@ -58,6 +58,11 @@
         document.getElementById("project-viewer").innerHTML = `
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
+    if (projectId) {
+      const key = `project_views_${projectId}`;
+      const current = parseInt(localStorage.getItem(key) || "0", 10);
+      localStorage.setItem(key, current + 1);
+    }
   </script>
 </body>
 </html>
