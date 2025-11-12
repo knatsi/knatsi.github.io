@@ -8,10 +8,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
 
-  <!-- Navbar -->
-  <div id="navbar"></div>
-  <div class="pt-20"></div> <!-- offset for fixed navbar -->
-
   <!-- Main Content -->
   <main class="flex-grow max-w-5xl mx-auto px-6 py-16">
     <!-- Hero section -->
@@ -72,13 +68,7 @@
     </div>
   </footer>
   <script>
-  // Load shared navbar
-  fetch('pages/navbar.html')
-    .then(res => res.text())
-    .then(html => {
-      document.getElementById('navbar').innerHTML = html;
-    })
-    .catch(err => console.error('Failed to load navbar:', err));
+
 </script>
 </body>
 </html>
