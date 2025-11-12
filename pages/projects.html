@@ -37,7 +37,7 @@
   <!-- Script -->
   <script>
   // Load shared navbar
-  fetch('navbar.html')
+  fetch('pages/navbar.html')
     .then(res => res.text())
     .then(html => {
       document.getElementById('navbar').innerHTML = html;
@@ -45,7 +45,7 @@
     .catch(err => console.error('Failed to load navbar:', err));
     
     // Load all projects dynamically
-    fetch('projects.json')
+    fetch('assets/projects.json')
       .then(res => res.json())
       .then(projects => {
         const grid = document.getElementById('project-grid');
