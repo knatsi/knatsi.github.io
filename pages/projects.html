@@ -33,7 +33,7 @@
   <script>
 
     // Load all projects dynamically
-    fetch('assets/projects.json')
+    fetch('../assets/projects.json')
       .then(res => res.json())
       .then(projects => {
         const grid = document.getElementById('project-grid');
