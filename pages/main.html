@@ -34,24 +34,29 @@
   <!-- Script -->
 <script>
   // Hex Codes: #32323F, #4C4E5D, #988E96, #BCABA8, #DDD5D0
- // Load projects and feature the 3 most viewed
-  // Load both: your project list + global view counts
+  // Load top-3 most-viewed projects directly from Raspberry Pi backend
+
+  const API_BASE = "https://knatsi.synology.me"; // your Pi backend base URL
+
   Promise.all([
-    fetch('../assets/projects.json').then(res => res.json()),
-    fetch('https://knatsi.github.io/smtp2go-relay/data/views.json').then(res => res.json())
+    fetch("../assets/projects.json").then(res => res.json()),
+    fetch(`${API_BASE}/counter/top3`).then(res => res.json())
   ])
-  .then(([projects, views]) => {
-    // Attach global view counts to projects
-    projects.forEach(p => {
-      p.views = views[p.id] || 0;
-    });
+  .then(([projects, viewData]) => {
+    const topPages = viewData.top3.map(v => v.page);
+    const topCounts = Object.fromEntries(
+      viewData.top3.map(v => [v.page, v.count])
+    );
 
-    // Sort by views (highest first)
-    projects.sort((a, b) => b.views - a.views);
+    // Match the top pages with your project list
+    const featured = projects
+      .filter(p => topPages.includes(p.id) || topPages.includes(p.link))
+      .map(p => ({
+        ...p,
+        views: topCounts[p.id] || topCounts[p.link] || 0
+      }));
 
-    // Pick top 3 featured projects
-    const featured = projects.slice(0, 3);
-    const container = document.getElementById('featured-projects');
+    const container = document.getElementById("featured-projects");
 
     // Render project cards
     container.innerHTML = featured.map(p => `
@@ -65,15 +70,15 @@
             <span class="bg-[#DDD5D0] text-[#4C4E5D] text-sm px-2 py-1 rounded-full">
               ${tag}
             </span>
-          `).join('')}
+          `).join("")}
         </div>
         <p class="text-sm text-gray-400 mt-2">👁 ${p.views} views</p>
       </a>
-    `).join('');
+    `).join("");
   })
   .catch(err => {
     console.error(err);
-    document.getElementById('featured-projects').innerHTML =
+    document.getElementById("featured-projects").innerHTML =
       '<p class="text-center text-red-600">Unable to load featured projects.</p>';
   });
 </script>
