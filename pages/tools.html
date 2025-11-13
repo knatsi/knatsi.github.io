@@ -109,6 +109,13 @@
   </style>
 </head>
 <body>
+	<script>
+		fetch("https://knatsi.synology.me/counter", {
+		  method: "POST",
+		  headers: { "Content-Type": "application/json" },
+		  body: JSON.stringify({ page: window.location.pathname })
+		});
+	</script>
   <div class="container">
     <h1>Daniels verktygslista</h1>
     <table id="csvTable">
