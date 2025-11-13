@@ -126,7 +126,7 @@
     const encodedUrl = "aHR0cHM6Ly9rbmF0c2kuZ2l0aHViLmlvL2RhdGFiYXNlX3Rvb2xzLmNzdg==";
 
     async function loadCSV() {
-      const url = atob(encodedUrl);
+      const url = '../assets/database_tools.csv';
       try {
         const response = await fetch(url);
         const csvText = await response.text();
