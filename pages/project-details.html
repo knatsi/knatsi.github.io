@@ -55,15 +55,15 @@
         document.getElementById("project-viewer").innerHTML = `
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
-      if (projectId) {
-        fetch("https://api.github.com/repos/knatsi/smtp2go-relay/issues/1/comments", {
-          method: "POST",
-          headers: {
-            "Accept": "application/vnd.github+json",
-          },
-          body: JSON.stringify({ body: `view:${projectId}` })
-        }).catch(err => console.error("View log failed:", err));
-      }
+//      if (projectId) {
+//        fetch("https://api.github.com/repos/knatsi/smtp2go-relay/issues/1/comments", {
+//          method: "POST",
+//          headers: {
+//            "Accept": "application/vnd.github+json",
+//          },
+//          body: JSON.stringify({ body: `view:${projectId}` })
+//        }).catch(err => console.error("View log failed:", err));
+//      }
       
   </script>
 </body>
