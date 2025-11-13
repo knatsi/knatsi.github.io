@@ -1,0 +1,1780 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-K5EK690VW8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-K5EK690VW8');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECG Ladder Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f8f8;
+            border-radius: 5px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.active {
+            background: #2196F3;
+        }
+        
+        button.clear {
+            background: #f44336;
+        }
+        
+        button.clear:hover {
+            background: #da190b;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .dropdown-toggle .arrow {
+            font-size: 10px;
+            margin-left: 0px;
+        }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 10;
+            min-width: auto;
+            width: max-content;
+        }
+        
+        .dropdown-menu div {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        .dropdown-menu div:hover {
+            background: #f1f1f1;
+        }
+        .line-width-control {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+        }
+        
+        #lineWidthSlider {
+            width: 120px;
+            cursor: pointer;
+        }
+        
+        #lineWidthValue {
+            min-width: 40px;
+            text-align: right;
+            font-size: 0.9em;
+            color: #333;
+}
+        .canvas-container {
+            border: 2px solid #ddd;
+            background: white;
+            overflow: auto;
+            position: relative;
+        }
+
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dropZoneCSS {
+            border: 2px dashed #888;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        
+        }
+        
+        .dropZoneCSS.dragover {
+          border-color: #0b74de;
+          background-color: #e6f2ff;
+          color: #0b74de;
+        }
+        
+        .dropZoneCSS input[type="file"] {
+          display: none;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        input[type="number"] {
+            width: 70px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            cursor: pointer;
+        }
+        
+        label {
+            font-size: 14px;
+            color: #555;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ECG Ladder Diagram Drawing Tool</h1>
+        
+        <div class="toolbar">
+            <div class="dropZoneCSS","color-picker" id="dropZone">
+                <label>Drag & drop an XML, PDF, or image here<br>or click to select a file</label>
+                <input type="file" id="ecgFile" accept="image/*,.pdf,.xml" />
+            </div>
+                <div class="color-picker" id="imageVScaleSelector" style="display: none;">
+                  <label>Vertical Scale: <span id="vScaleValue">100</span>%</label>
+                  <input type="range" id="vScaleSlider" min="10" max="200" value="100" step="1">
+                </div>
+                <div class="color-picker" id="imageScaleSelector" style="display: none;">
+                  <label>Horizontal Scale: <span id="hScaleValue">100</span>%</label>
+                  <input type="range" id="hScaleSlider" min="10" max="200" value="100" step="1">
+                </div>
+            </div>
+            
+            <div class="color-picker" id="leadSelector" style="display: none;">
+                <label>Select Lead:</label>
+                <select id="leadDropdown"></select>
+            </div>
+            
+            <div class="color-picker" id="speedSelector" style="display: none;">
+                <label>ECG Speed: <span id="speedValue">25</span> mm/s</label>
+                <input type="range" id="speedSlider" min="0" max="3" value="1" step="1">
+            </div>
+            
+            <div class="color-picker" id="scrollSelector" style="display: none;">
+                <label>Scroll:</label>
+                <input type="range" id="scrollSlider" min="0" max="100" value="0" step="1">
+            </div>
+        
+          
+
+          <div class="color-picker">
+          <div id="preview-container" style="position: relative; display: none;">
+            <canvas id="pdfCanvas" style="max-width: 100%; display: block;"></canvas>
+            <img id="preview" alt="Preview will appear here" style="max-width: 100%; display: block;">
+            <canvas id="overlay" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
+          </div>
+          
+
+        
+        </div>
+        
+        <div class="toolbar">
+            <button id="drawLine" class="active" title="Draw Line">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil-line-icon lucide-pencil-line">
+              <path d="M13 21h8"/><path d="m15 5 4 4"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button>
+            <button id="adjust"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-icon lucide-move"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 9 3 3-3 3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg></button>
+            <div class="dropdown">
+              <button id="drawDot" class="dropdown-toggle" title="Draw Symbol">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                       viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+                       class="lucide lucide-circle-dot-icon">
+                       <circle cx="12" cy="12" r="10"/>
+                       <circle cx="12" cy="12" r="1"/>
+                  </svg>
+                  <span id="symbolLabel"></span>
+                  <span class="arrow"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down-icon lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg></span>
+              </button>
+              <div id="symbolMenu" class="dropdown-menu">
+                  <div data-type="dot">                  
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" 
+                       viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+                       class="lucide lucide-circle-dot-icon">
+                       <circle cx="12" cy="12" r="10"/>
+                       <circle cx="12" cy="12" r="1"/>
+                    </svg></div>
+                  <div data-type="arrow">Arrow</div>
+                  <div data-type="singleLine">Single Line</div>
+                  <div data-type="doubleLine">Double Line</div>
+              </div>
+          </div>
+            
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="color-picker">
+                  <label>Color:</label>
+                  <input type="color" id="colorPicker" value="#000000" style="width: 40px; height: 25px;">
+              </div>
+              
+              <div class="line-width-control">
+                  <label for="lineWidthSlider">Line Width:</label>
+                  <input type="range" id="lineWidth" min="1" max="10" value="2">
+              </div>
+          </div>
+            <button id="undo" titel="Undo"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo-icon lucide-undo"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
+            <button id="clear" class="clear" title="Clear All"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-undo2-icon lucide-undo-2"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></button></button>
+            <button id="saveImageBtn" title="Save Image"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
+        </div>
+        
+
+        
+        <div class="canvas-container">
+            <canvas id="canvas" width="1200" height="450"></canvas>
+        </div>
+        
+        <div class="info">
+            <strong>Instructions:</strong> Click and drag to draw. Use different tools to create your ECG ladder diagram showing electrical conduction paths. Use Shift + Drag to select and then copy (Ctr + c), paste (Ctr + v) and delete (Del). <br> Use Ctr + drag to meassure (calibrated for xml ecg files). 
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let isDrawing = false;
+        let currentTool = 'line';
+        let currentColor = '#000000';
+        let currentLineWidth = 2;
+        let currentSymbol = 'dot';
+        let startX, startY;
+        let tempStartX, tempStartY;
+        let history = [];
+        let tempCanvas = document.createElement('canvas');
+        let tempCtx = tempCanvas.getContext('2d');
+        let ecgScrollOffset = 0;     // horizontal offset in pixels
+        let maxScrollOffset = 0;     // how far we can scroll
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        let selection = null;
+        let clipboard = null;
+        let isSelecting = false;
+        let ladderElements = []; // each element: { type, points, selected }
+        
+        
+        // Store all drawn lines and symbols
+        let lines = [];
+        let symbols = [];
+        let hoveredEndpoint = null;
+        let draggingEndpoint = null;
+        let hoveredSymbol = null;
+        let draggingSymbol = null;
+        let pastingMode = false;
+        let pastePreview = null;
+        let pasteReferenceX = 0;
+        
+        // ECG data
+        let ecgData = null;
+        let ecgLeads = [];
+        let currentLead = null;
+        let ecgHeight = 150;
+        let ecgSpeed = 25;
+        const speedOptions = [12.5, 25, 50, 100];
+        
+        // Helper line
+        let mouseX = -1;
+        let lastMouseX = 0;
+        let showHelperLine = false;
+        let measureStartX = null; //Measurementlines
+        let measureEndX = null; //Measurementlines
+        let isMeasuring = false; //Measurementlines
+        
+        const atriaStart = ecgHeight;
+        const ladderHeight = canvas.height - ecgHeight;
+        const atriaHeight = ladderHeight * 0.25;
+        const avHeight = ladderHeight * 0.5;
+        const ventricleLine = atriaStart + atriaHeight + avHeight;
+        const ventricleHeight = ladderHeight * 0.25;
+        
+        const halfStepA = atriaHeight / 4;
+        const halfStepAV = avHeight / 4;
+        const halfStepV = ventricleHeight / 4;
+        
+        const snapLines = [
+            atriaStart,
+            atriaStart + halfStepA,
+            atriaStart + atriaHeight / 2,
+            atriaStart + atriaHeight - halfStepA,
+            atriaStart + atriaHeight,
+            atriaStart + atriaHeight + halfStepAV,
+            atriaStart + atriaHeight + avHeight / 2,
+            ventricleLine - halfStepAV,
+            ventricleLine,
+            ventricleLine + halfStepV,
+            ventricleLine + ventricleHeight / 2,
+            canvas.height - halfStepV,
+            canvas.height
+        ];
+        
+        //PDF/Img constants
+        const preview = document.getElementById('preview');
+        const overlay = document.getElementById('overlay');
+        const pdfCanvas = document.getElementById('pdfCanvas');
+        const IMGresult = document.getElementById('IMGresult');
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('ecgFile');
+    
+        let img = null;
+        let pdfPage = null;
+        let pdfScale = 1;
+        let IMGstartX, IMGstartY, IMGendX, IMGendY, IMGisDrawing = false;
+        let ecgImage = null; // Store the cropped ECG image
+        let ecgImageHScale = 1.0;
+        let ecgImageVScale = 1.0;
+            
+            
+        
+        function snapToLine(y) {
+            let closest = snapLines[0];
+            let minDist = Math.abs(y - snapLines[0]);
+            
+            for (let line of snapLines) {
+                let dist = Math.abs(y - line);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = line;
+                }
+            }
+            
+            return closest;
+        }
+        
+        function isNearPoint(x, y, px, py, threshold = 8) {
+            return Math.abs(x - px) < threshold && Math.abs(y - py) < threshold;
+        }
+        
+        function findEndpointAtPosition(x, y) {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (isNearPoint(x, y, line.x1, line.y1)) {
+                    return { lineIndex: i, endpoint: 'start', x: line.x1, y: line.y1 };
+                }
+                if (isNearPoint(x, y, line.x2, line.y2)) {
+                    return { lineIndex: i, endpoint: 'end', x: line.x2, y: line.y2 };
+                }
+            }
+            return null;
+        }
+        
+        function findSymbolAtPosition(x, y) {
+            for (let i = 0; i < symbols.length; i++) {
+                const symbol = symbols[i];
+                if (isNearPoint(x, y, symbol.x, symbol.y, 10)) {
+                    return i;
+                }
+            }
+            return null;
+        }
+        
+        function drawSymbol(x, y, type, color, size, lineAngle = 0) {
+            const radius = size * 2.5;
+            
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            
+            switch(type) {
+                case 'dot':
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                    
+                case 'arrow':
+                    const arrowLength = 10 + size;
+                    const arrowWidth = 6 + size;
+                    const angle = lineAngle || 0;
+                    
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(
+                        x - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle),
+                        y - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle)
+                    );
+                    ctx.lineTo(
+                        x - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle),
+                        y - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle)
+                    );
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                    
+                case 'singleLine':
+                    const perpAngle = lineAngle + Math.PI / 2;
+                    const lineLen = radius * 1.5;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen * Math.cos(perpAngle),
+                        y - lineLen * Math.sin(perpAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen * Math.cos(perpAngle),
+                        y + lineLen * Math.sin(perpAngle)
+                    );
+                    ctx.stroke();
+                    break;
+                    
+                case 'doubleLine':
+                    const perpAngle2 = lineAngle + Math.PI / 2;
+                    const lineLen2 = radius * 1.5;
+                    const spacing = size * 2;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen2 * Math.cos(perpAngle2) - spacing * Math.cos(lineAngle),
+                        y - lineLen2 * Math.sin(perpAngle2) - spacing * Math.sin(lineAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen2 * Math.cos(perpAngle2) - spacing * Math.cos(lineAngle),
+                        y + lineLen2 * Math.sin(perpAngle2) - spacing * Math.sin(lineAngle)
+                    );
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(
+                        x - lineLen2 * Math.cos(perpAngle2) + spacing * Math.cos(lineAngle),
+                        y - lineLen2 * Math.sin(perpAngle2) + spacing * Math.sin(lineAngle)
+                    );
+                    ctx.lineTo(
+                        x + lineLen2 * Math.cos(perpAngle2) + spacing * Math.cos(lineAngle),
+                        y + lineLen2 * Math.sin(perpAngle2) + spacing * Math.sin(lineAngle)
+                    );
+                    ctx.stroke();
+                    break;
+            }
+        }
+        
+        function redrawCanvas() {
+            drawGrid();
+        
+            // --- Draw all lines ---
+            lines.forEach((line) => {
+                ctx.strokeStyle = line.selected ? '#ff0000' : line.color;
+                ctx.lineWidth = line.selected ? line.width + 1 : line.width;
+                ctx.lineCap = 'round';
+        
+                ctx.beginPath();
+                ctx.moveTo(line.x1, line.y1);
+                ctx.lineTo(line.x2, line.y2);
+                ctx.stroke();
+        
+                if (line.selected) {
+                    // highlight endpoints
+                    ctx.fillStyle = '#ff0000';
+                    [ [line.x1, line.y1], [line.x2, line.y2] ].forEach(([x, y]) => {
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                }
+            });
+        
+            // --- Draw all symbols ---
+            symbols.forEach((symbol) => {
+                drawSymbol(symbol.x, symbol.y, symbol.type, 
+                    symbol.selected ? '#ff0000' : symbol.color, 
+                    symbol.size, symbol.lineAngle);
+        
+                if (symbol.selected) {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(symbol.x, symbol.y, symbol.size * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+
+            
+            if (hoveredEndpoint && !draggingEndpoint && currentTool === 'adjust') {
+                const line = lines[hoveredEndpoint.lineIndex];
+                const x = hoveredEndpoint.endpoint === 'start' ? line.x1 : line.x2;
+                const y = hoveredEndpoint.endpoint === 'start' ? line.y1 : line.y2;
+                
+                ctx.fillStyle = '#2196F3';
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            if (hoveredSymbol !== null && !draggingSymbol && currentTool === 'adjust') {
+                const symbol = symbols[hoveredSymbol];
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(symbol.x, symbol.y, symbol.size * 2.5 + 3, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            if (showHelperLine && mouseX >= 0) {
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(mouseX, 0);
+                ctx.lineTo(mouseX, canvas.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+        
+        function drawArrowhead(x1, y1, x2, y2, color, width) {
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const arrowLength = 10 + width;
+            const arrowWidth = 6 + width;
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(
+                x2 - arrowLength * Math.cos(angle) - arrowWidth * Math.sin(angle),
+                y2 - arrowLength * Math.sin(angle) + arrowWidth * Math.cos(angle)
+            );
+            ctx.lineTo(
+                x2 - arrowLength * Math.cos(angle) + arrowWidth * Math.sin(angle),
+                y2 - arrowLength * Math.sin(angle) - arrowWidth * Math.cos(angle)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function drawECG() {
+            if (!currentLead || !ecgData) return;
+            
+            const leadData = ecgData[currentLead];
+            if (!leadData) return;
+            
+            const padding = 10;
+            const drawWidth = canvas.width - padding * 2;
+            const drawHeight = ecgHeight - 40;
+            const yOffset = 30;
+        
+            // ECG speed scaling (higher speed = stretched, lower = compressed)
+            const speedRatio = ecgSpeed / 25;
+            const visibleSamples = Math.floor(leadData.length / speedRatio);
+        
+            // compute how many pixels per sample for full dataset
+            const totalWidth = (leadData.length / visibleSamples) * drawWidth;
+            maxScrollOffset = Math.max(0, totalWidth - drawWidth);
+            const samplesPerPixel = leadData.length / totalWidth;
+        
+            // translate offset to sample index range
+            const startSample = Math.floor((ecgScrollOffset / totalWidth) * leadData.length);
+            const endSample = Math.min(leadData.length, startSample + visibleSamples);
+            const displayData = leadData.slice(startSample, endSample);
+        
+            const min = Math.min(...displayData);
+            const max = Math.max(...displayData);
+            const range = max - min;
+            if (range === 0) return;
+        
+            const baseline = yOffset + drawHeight - ((0 - min) / range) * drawHeight;
+        
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+        
+            displayData.forEach((value, index) => {
+                const x = padding + (index / visibleSamples) * drawWidth;
+                const y = yOffset + drawHeight - ((value - min) / range) * drawHeight;
+                if (index === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+        
+            // Fill remainder with baseline if not full width
+            const usedWidth = padding + (displayData.length / visibleSamples) * drawWidth;
+            if (usedWidth < drawWidth + padding) {
+                ctx.lineTo(drawWidth + padding, baseline);
+            }
+        
+            ctx.stroke();
+        }
+
+
+        
+        function parseECGXML(xmlText) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+            
+            const parsedData = {};
+            const leads = [];
+            
+            const rhythmLeads = xmlDoc.getElementsByTagName('RhythmLead');
+            
+            if (rhythmLeads.length > 0) {
+                for (let i = 0; i < rhythmLeads.length; i++) {
+                    const lead = rhythmLeads[i];
+                    const leadIdElement = lead.getElementsByTagName('LeadId')[0];
+                    const samplesElement = lead.getElementsByTagName('Samples')[0];
+                    
+                    if (leadIdElement && samplesElement) {
+                        const leadName = leadIdElement.textContent.trim();
+                        const base64Data = samplesElement.textContent.trim();
+                        
+                        try {
+                            const binaryString = atob(base64Data);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            
+                            const samples = [];
+                            for (let j = 0; j < bytes.length - 1; j += 2) {
+                                const value = bytes[j] | (bytes[j + 1] << 8);
+                                samples.push(value > 32767 ? value - 65536 : value);
+                            }
+                            
+                            if (samples.length > 0) {
+                                parsedData[leadName] = samples;
+                                leads.push(leadName);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing lead', leadName, e);
+                        }
+                    }
+                }
+            } else {
+                const waveforms = xmlDoc.getElementsByTagName('Waveform');
+                
+                for (let i = 0; i < waveforms.length; i++) {
+                    const waveform = waveforms[i];
+                    const leadElement = waveform.getElementsByTagName('LeadID')[0] || 
+                                       waveform.getElementsByTagName('lead')[0];
+                    
+                    if (!leadElement) continue;
+                    
+                    const leadName = leadElement.textContent.trim();
+                    const waveformData = waveform.getElementsByTagName('WaveformData')[0] || 
+                                        waveform.getElementsByTagName('data')[0];
+                    
+                    if (waveformData) {
+                        const base64Data = waveformData.textContent.trim();
+                        try {
+                            const binaryString = atob(base64Data);
+                            const bytes = new Uint8Array(binaryString.length);
+                            for (let j = 0; j < binaryString.length; j++) {
+                                bytes[j] = binaryString.charCodeAt(j);
+                            }
+                            
+                            const samples = [];
+                            for (let j = 0; j < bytes.length - 1; j += 2) {
+                                const value = bytes[j] | (bytes[j + 1] << 8);
+                                samples.push(value > 32767 ? value - 65536 : value);
+                            }
+                            
+                            if (samples.length > 0) {
+                                parsedData[leadName] = samples;
+                                leads.push(leadName);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing lead', leadName, e);
+                        }
+                    }
+                }
+            }
+            
+            return { data: parsedData, leads: leads };
+        }
+        
+        function drawLadder() {
+            ladderElements.forEach(el => {
+                ctx.strokeStyle = el.selected ? 'red' : 'black';
+                ctx.fillStyle = el.selected ? 'red' : 'black';
+                ctx.lineWidth = el.selected ? 2 : 1;
+        
+                if (el.type === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(el.points[0].x, el.points[0].y);
+                    ctx.lineTo(el.points[1].x, el.points[1].y);
+                    ctx.stroke();
+        
+                    if (el.selected) {
+                        el.points.forEach(p => {
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        });
+                    }
+                } else if (el.type === 'symbol') {
+                    const p = el.points[0];
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+        function drawMeasurement() {
+            if (measureStartX === null || measureEndX === null) return;
+        
+            const start = Math.min(measureStartX, measureEndX);
+            const end = Math.max(measureStartX, measureEndX);
+            const mid = (start + end) / 2;
+        
+            // Main red measurement lines
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+        
+            ctx.beginPath();
+            ctx.moveTo(start, 0);
+            ctx.lineTo(start, canvas.height);
+            ctx.stroke();
+        
+            ctx.beginPath();
+            ctx.moveTo(end, 0);
+            ctx.lineTo(end, canvas.height);
+            ctx.stroke();
+        
+            ctx.setLineDash([]);
+        
+            // Compute time difference (in ms)
+            const mmPerPixel = 0.2117; // your calibrated value
+            const msPerMm = 1000 / ecgSpeed; // e.g. 25 mm/s = 40 ms/mm
+            const distanceMm = (end - start) * mmPerPixel;
+            const timeMs = distanceMm * msPerMm;
+        
+            // Draw repeated lighter sub-lines at same intervals after the end line
+            const spacing = end - start;
+            const numRepeats = 3; // number of extra segments
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 6]);
+        
+            for (let i = 1; i <= numRepeats; i++) {
+                const x = end + i * spacing;
+                if (x > canvas.width) break; // don't draw beyond canvas
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+        
+            ctx.setLineDash([]);
+        
+            // Label in ms at the end line
+            ctx.fillStyle = 'red';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${timeMs.toFixed(1)} ms`, end + 5, canvas.height - 10);
+        }
+
+        function drawSelection() {
+            if (!selection) return;
+            const x = Math.min(selection.startX, selection.endX);
+            const y = Math.min(selection.startY, selection.endY);
+            const w = Math.abs(selection.endX - selection.startX);
+            const h = Math.abs(selection.endY - selection.startY);
+        
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0,0,255,0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
+        
+
+        
+        function selectLadderElements() {
+            if (!selection) return;
+        
+            const x1 = Math.min(selection.startX, selection.endX);
+            const y1 = Math.min(selection.startY, selection.endY);
+            const x2 = Math.max(selection.startX, selection.endX);
+            const y2 = Math.max(selection.startY, selection.endY);
+        
+            lines.forEach(line => {
+                line.selected = (
+                    (line.x1 >= x1 && line.x1 <= x2 && line.y1 >= y1 && line.y1 <= y2) ||
+                    (line.x2 >= x1 && line.x2 <= x2 && line.y2 >= y1 && line.y2 <= y2)
+                );
+            });
+        
+            symbols.forEach(symbol => {
+                symbol.selected = (
+                    symbol.x >= x1 && symbol.x <= x2 &&
+                    symbol.y >= y1 && symbol.y <= y2
+                );
+            });
+        }
+
+        function drawGrid() {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw gray background for ECG area FIRST
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, ecgHeight);
+            
+            // Draw the ECG image on top if it exists
+            if (ecgImage) {
+                console.log('Drawing ecgImage:', ecgImage.width, ecgImage.height);
+                ctx.drawImage(ecgImage.canvas, 0, 0, ecgImage.canvas.width, ecgImage.canvas.height, 
+                              0, 0, ecgImage.width, ecgImage.height);
+            }
+            
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textBaseline = 'top';
+            ctx.fillText('ECG', 10, 10);
+            
+            if (currentLead && ecgData) {
+                drawECG();
+            }
+        
+                    
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, ecgHeight);
+            ctx.lineTo(canvas.width, ecgHeight);
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(0, atriaStart + atriaHeight);
+            ctx.lineTo(canvas.width, atriaStart + atriaHeight);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(0, ventricleLine);
+            ctx.lineTo(canvas.width, ventricleLine);
+            ctx.stroke();
+            
+            // light vertical grid lines that scroll with ECG
+            ctx.strokeStyle = '#eeeeee';
+            ctx.lineWidth = 1;
+            
+            const gridSpacing = 40;
+            const totalGridWidth = Math.ceil((canvas.width + maxScrollOffset) / gridSpacing) * gridSpacing;
+            
+            for (let x = -ecgScrollOffset % gridSpacing; x < canvas.width; x += gridSpacing) {
+                ctx.beginPath();
+                ctx.moveTo(x, ecgHeight);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('A (Atria)', 10, atriaStart + atriaHeight / 2);
+            ctx.fillText('AV (AV Node)', 10, atriaStart + atriaHeight + avHeight / 2);
+            ctx.fillText('V (Ventricles)', 10, ventricleLine + ventricleHeight / 2);
+        }
+        
+        function drawPastePreview(mouseX) {
+            if (!pastePreview) return;
+        
+            const dx = mouseX - pasteReferenceX;
+        
+            ctx.save();
+            ctx.globalAlpha = 0.6;
+        
+            pastePreview.lines.forEach(line => {
+                const newX1 = line.x1 + dx;
+                const newX2 = line.x2 + dx;
+        
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = line.width;
+                ctx.beginPath();
+                ctx.moveTo(newX1, line.y1);
+                ctx.lineTo(newX2, line.y2);
+                ctx.stroke();
+        
+                // endpoint highlights
+                ctx.fillStyle = '#ff0000';
+                [ [newX1, line.y1], [newX2, line.y2] ].forEach(([x, y]) => {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+        
+            pastePreview.symbols.forEach(symbol => {
+                drawSymbol(symbol.x + dx, symbol.y, symbol.type, '#ff0000', symbol.size, symbol.lineAngle);
+            });
+        
+            ctx.restore();
+        }
+        
+        function saveState() {
+            history.push({
+                lines: JSON.parse(JSON.stringify(lines)),
+                symbols: JSON.parse(JSON.stringify(symbols)),
+                dataUrl: canvas.toDataURL()
+            });
+            if (history.length > 20) {
+                history.shift();
+            }
+        }
+        
+        function restoreState(state) {
+            lines = JSON.parse(JSON.stringify(state.lines));
+            symbols = JSON.parse(JSON.stringify(state.symbols));
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = state.dataUrl;
+        }
+        
+        function getSelectionRect() {
+            if (!selection) return null;
+            const x = Math.min(selection.startX, selection.endX);
+            const y = Math.min(selection.startY, selection.endY);
+            const w = Math.abs(selection.endX - selection.startX);
+            const h = Math.abs(selection.endY - selection.startY);
+            return { x, y, w, h };
+        }
+        
+        function clearSelection() {
+            const rect = getSelectionRect();
+            if (!rect) return;
+            ctx.clearRect(rect.x, rect.y, rect.w, rect.h);
+            selection = null;
+        }
+        
+        function copySelection() {
+            const rect = getSelectionRect();
+            if (!rect) return;
+            const imageData = ctx.getImageData(rect.x, rect.y, rect.w, rect.h);
+            clipboard = { data: imageData, width: rect.w, height: rect.h };
+        }
+        
+        function pasteSelection() {
+            if (!clipboard) return;
+            const x = selection ? selection.startX : 20; // default paste offset
+            const y = selection ? selection.startY : 20;
+            ctx.putImageData(clipboard.data, x, y);
+            selection = null;
+        }
+        
+        function clearPreview() {
+          const overlayCtx = overlay.getContext('2d');
+          if (overlayCtx) {
+            overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+          }
+          pdfCanvas.width = pdfCanvas.height = 0;
+          preview.src = '';
+          if (IMGresult) {
+            IMGresult.width = IMGresult.height = 0;
+          }
+        }
+        
+        drawGrid();
+        saveState();
+        
+        document.getElementById('drawLine').addEventListener('click', function() {
+            currentTool = 'line';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            hoveredEndpoint = null;
+            redrawCanvas();
+        });
+        
+        document.getElementById('adjust').addEventListener('click', function() {
+            currentTool = 'adjust';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            canvas.style.cursor = 'default';
+        });
+        document.getElementById('hScaleSlider').addEventListener('input', function(e) {
+            ecgImageHScale = parseInt(e.target.value) / 100;
+            document.getElementById('hScaleValue').textContent = e.target.value;
+            if (ecgImage) {
+                ecgImage.width = ecgImage.originalWidth * ecgImageHScale;
+            }
+            redrawCanvas();
+        });
+        
+        document.getElementById('vScaleSlider').addEventListener('input', function(e) {
+            ecgImageVScale = parseInt(e.target.value) / 100;
+            document.getElementById('vScaleValue').textContent = e.target.value;
+            if (ecgImage) {
+                ecgImage.height = ecgImage.originalHeight * ecgImageVScale;
+            }
+            redrawCanvas();
+        });
+        
+ //       document.getElementById('drawDot').addEventListener('click', function() {
+///            currentTool = 'dot';
+//            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+//            this.classList.add('active');
+//            canvas.style.cursor = 'crosshair';
+//            hoveredEndpoint = null;
+//            hoveredSymbol = null;
+//            redrawCanvas();
+//        });
+        
+//        document.getElementById('symbolType').addEventListener('change', function(e) {
+//            currentSymbol = e.target.value;
+//        });
+        
+         fileInput.addEventListener('change', async function(e) {
+              const file = e.target.files[0];
+              if (!file) return;
+              
+              // Handle images
+              if (file.type.startsWith('image/')) {
+                  const reader = new FileReader();
+                  reader.onload = function(event) {
+                      img = new Image();
+                      img.onload = () => {
+                          document.getElementById('preview-container').style.display = 'inline-block';
+                          pdfCanvas.style.display = 'none';
+                          preview.style.display = 'block';
+                          overlay.width = img.width;
+                          overlay.height = img.height;
+                          preview.src = img.src;
+                      };
+                      img.src = event.target.result;
+                  };
+                  reader.readAsDataURL(file);
+              }
+              // Handle PDFs
+              else if (file.type === 'application/pdf') {
+                  document.getElementById('preview-container').style.display = 'inline-block';
+                  pdfCanvas.style.display = 'block';
+                  preview.style.display = 'none';
+                  const arrayBuffer = await file.arrayBuffer();
+                  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                  pdfPage = await pdf.getPage(1);
+                  const viewport = pdfPage.getViewport({ scale: 2 });
+                  pdfScale = 2;
+              
+                  // Set canvas dimensions
+                  pdfCanvas.width = viewport.width;
+                  pdfCanvas.height = viewport.height;
+                  overlay.width = viewport.width;
+                  overlay.height = viewport.height;
+                  
+                  // Force CSS dimensions to match canvas dimensions
+                  pdfCanvas.style.width = viewport.width + 'px';
+                  pdfCanvas.style.height = viewport.height + 'px';
+                  overlay.style.width = viewport.width + 'px';
+                  overlay.style.height = viewport.height + 'px';
+              
+                  const pdfCtx = pdfCanvas.getContext('2d');
+                  await pdfPage.render({ canvasContext: pdfCtx, viewport }).promise;
+                  
+                  console.log('PDF rendered - Canvas:', pdfCanvas.width, pdfCanvas.height, 'Overlay:', overlay.width, overlay.height);
+              }
+              // Handle XML (original ECG functionality)
+              else if (file.type === 'text/xml' || file.name.endsWith('.xml')) {
+                  const reader = new FileReader();
+                  reader.onload = function(event) {
+                      const xmlText = event.target.result;
+                      const result = parseECGXML(xmlText);
+                      
+                      if (result.leads.length > 0) {
+                          ecgData = result.data;
+                          ecgLeads = result.leads;
+                          
+                          const dropdown = document.getElementById('leadDropdown');
+                          dropdown.innerHTML = '';
+                          ecgLeads.forEach(lead => {
+                              const option = document.createElement('option');
+                              option.value = lead;
+                              option.textContent = lead;
+                              dropdown.appendChild(option);
+                          });
+                          
+                          currentLead = ecgLeads[0];
+                          document.getElementById('leadSelector').style.display = 'flex';
+                          document.getElementById('speedSelector').style.display = 'flex';
+                          document.getElementById('scrollSelector').style.display = 'flex';
+                          document.getElementById('scrollSlider').value = 0;
+                          ecgScrollOffset = 0;
+                          redrawCanvas();
+                      } else {
+                          alert('No valid ECG leads found in the XML file.');
+                      }
+                  };
+                  reader.readAsText(file);
+              }
+              else {
+                  alert('Please select an image, PDF, or XML file.');
+              }
+          });
+        
+        document.getElementById('leadDropdown').addEventListener('change', function(e) {
+            currentLead = e.target.value;
+            redrawCanvas();
+        });
+        
+        document.getElementById('speedSlider').addEventListener('input', function(e) {
+            const speedIndex = parseInt(e.target.value);
+            ecgSpeed = speedOptions[speedIndex];
+            document.getElementById('speedValue').textContent = ecgSpeed;
+            redrawCanvas();
+        });
+        
+        document.getElementById('scrollSlider').addEventListener('input', function(e) {
+            if (maxScrollOffset <= 0) return;
+            const percent = parseInt(e.target.value) / 100;
+            ecgScrollOffset = percent * maxScrollOffset;
+            redrawCanvas();
+        });
+        
+        document.getElementById('colorPicker').addEventListener('change', function(e) {
+            currentColor = e.target.value;
+        });
+        
+        document.getElementById('lineWidth').addEventListener('change', function(e) {
+            currentLineWidth = parseInt(e.target.value);
+        });
+        
+        document.getElementById('undo').addEventListener('click', function() {
+            if (history.length > 1) {
+                history.pop();
+                restoreState(history[history.length - 1]);
+            } else if (history.length === 1) {
+                lines = [];
+                symbols = [];
+                drawGrid();
+            }
+        });
+        
+        document.getElementById('clear').addEventListener('click', function() {
+          location.reload();
+        });
+        
+        document.getElementById('saveImageBtn').addEventListener('click', () => {
+            // Make sure the canvas is freshly drawn (to include measurement lines, etc.)
+            redrawCanvas();
+            drawMeasurement(); // keep measurement overlay visible in export
+        
+            // Convert canvas to PNG image
+            const image = canvas.toDataURL('image/png');
+        
+            // Create a hidden download link
+            const now = new Date().toISOString().replace(/[:.]/g, '-');
+            const link = document.createElement('a');
+            link.href = image;
+            link.download = `ECG_${now}.png`;
+            link.click();
+        });
+        
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Delete') {
+                lines = lines.filter(l => !l.selected);
+                symbols = symbols.filter(s => !s.selected);
+                redrawCanvas();
+            }
+        
+            if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+                clipboard = {
+                    lines: lines.filter(l => l.selected).map(l => ({...l})),
+                    symbols: symbols.filter(s => s.selected).map(s => ({...s}))
+                };
+            }
+        
+            if (e.ctrlKey && e.key.toLowerCase() === 'v' && clipboard) {
+                // Create deep copy
+                pastePreview = {
+                    lines: clipboard.lines.map(l => ({ ...l, selected: true })),
+                    symbols: clipboard.symbols.map(s => ({ ...s, selected: true }))
+                };
+        
+                // Find the horizontal center of copied content
+                const allXs = [
+                    ...pastePreview.lines.flatMap(l => [l.x1, l.x2]),
+                    ...pastePreview.symbols.map(s => s.x)
+                ];
+                const centerX = (Math.min(...allXs) + Math.max(...allXs)) / 2;
+        
+                // Start paste mode
+                pastingMode = true;
+                pasteReferenceX = centerX; // store where this geometry is centered
+                lastMouseX = canvas.width / 2; // default initial position
+                redrawCanvas();
+                drawPastePreview(lastMouseX);
+            }
+        });
+
+                
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (e.ctrlKey) {
+                const rect = canvas.getBoundingClientRect();
+                measureStartX = e.clientX - rect.left;
+                measureEndX = null;
+                isMeasuring = true;
+                return;
+            }
+            
+            if (e.shiftKey) {
+                // Start selection
+                selection = { startX: x, startY: y, endX: x, endY: y };
+                isSelecting = true;
+                return;
+            }
+            
+            if (pastingMode && y >= ecgHeight) {
+                const dx = lastMouseX - pasteReferenceX;
+            
+                pastePreview.lines.forEach(line => {
+                    lines.push({
+                        ...line,
+                        x1: line.x1 + dx,
+                        x2: line.x2 + dx,
+                        selected: false
+                    });
+                });
+            
+                pastePreview.symbols.forEach(symbol => {
+                    symbols.push({
+                        ...symbol,
+                        x: symbol.x + dx,
+                        y: symbol.y,
+                        selected: false
+                    });
+                });
+            
+                pastingMode = false;
+                pastePreview = null;
+                redrawCanvas();
+                return;
+            }
+            
+            if (currentTool === 'adjust') {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    draggingEndpoint = endpoint;
+                    return;
+                }
+                
+                const symbolIndex = findSymbolAtPosition(x, y);
+                if (symbolIndex !== null) {
+                    draggingSymbol = symbolIndex;
+                    return;
+                }
+                return;
+            }
+            
+            if (currentTool === 'line') {
+                isDrawing = true;
+                startX = x;
+                startY = snapToLine(y);
+                tempStartX = startX;
+                tempStartY = startY;
+                
+                tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                tempCtx.drawImage(canvas, 0, 0);
+            } else if (currentTool === 'dot') {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    const line = lines[endpoint.lineIndex];
+                    const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+                    
+                    symbols.push({
+                        x: endpoint.x,
+                        y: endpoint.y,
+                        type: currentSymbol,
+                        color: currentColor,
+                        size: currentLineWidth,
+                        lineAngle: lineAngle,
+                        lineIndex: endpoint.lineIndex,
+                        endpoint: endpoint.endpoint
+                    });
+                    redrawCanvas();
+                    saveState();
+                }
+            }
+        });
+        
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            lastMouseX = x;
+            
+            if (pastingMode && pastePreview) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                lastMouseX = mouseX;
+            
+                redrawCanvas();
+                drawPastePreview(mouseX);
+                return; // stop other move logic while pasting
+            }
+        
+            if (isSelecting) {
+                selection.endX = x;
+                redrawCanvas();
+                drawSelection();
+            }
+
+            if (isMeasuring && e.ctrlKey) {
+                const rect = canvas.getBoundingClientRect();
+                measureEndX = e.clientX - rect.left;
+                redrawCanvas();
+                drawMeasurement();
+                return;
+            }
+
+            if (isSelecting && e.shiftKey) {
+                const rect = canvas.getBoundingClientRect();
+                selection.endX = e.clientX - rect.left;
+                selection.endY = e.clientY - rect.top;
+                redrawCanvas();
+                drawSelection();
+                return;
+            }
+            
+            mouseX = x;
+            
+            if (draggingEndpoint) {
+                const line = lines[draggingEndpoint.lineIndex];
+                const snappedY = snapToLine(y);
+                
+                if (draggingEndpoint.endpoint === 'start') {
+                    line.x1 = x;
+                    line.y1 = snappedY;
+                } else {
+                    line.x2 = x;
+                    line.y2 = snappedY;
+                }
+                
+                redrawCanvas();
+                return;
+            }
+            
+            if (draggingSymbol !== null) {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    const line = lines[endpoint.lineIndex];
+                    const lineAngle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
+                    
+                    symbols[draggingSymbol].x = endpoint.x;
+                    symbols[draggingSymbol].y = endpoint.y;
+                    symbols[draggingSymbol].lineAngle = lineAngle;
+                    symbols[draggingSymbol].lineIndex = endpoint.lineIndex;
+                    symbols[draggingSymbol].endpoint = endpoint.endpoint;
+                    redrawCanvas();
+                }
+                return;
+            }
+            
+            if (currentTool === 'adjust') {
+                const endpoint = findEndpointAtPosition(x, y);
+                const symbolIndex = findSymbolAtPosition(x, y);
+                
+                if (endpoint || symbolIndex !== null) {
+                    hoveredEndpoint = endpoint;
+                    hoveredSymbol = symbolIndex;
+                    canvas.style.cursor = 'pointer';
+                    showHelperLine = false;
+                    redrawCanvas();
+                } else if (hoveredEndpoint || hoveredSymbol !== null) {
+                    hoveredEndpoint = null;
+                    hoveredSymbol = null;
+                    canvas.style.cursor = 'default';
+                    showHelperLine = true;
+                    redrawCanvas();
+                } else {
+                    showHelperLine = true;
+                    redrawCanvas();
+                }
+                return;
+            }
+            
+            if (currentTool === 'dot') {
+                const endpoint = findEndpointAtPosition(x, y);
+                if (endpoint) {
+                    canvas.style.cursor = 'pointer';
+                    showHelperLine = false;
+                } else {
+                    canvas.style.cursor = 'crosshair';
+                    showHelperLine = true;
+                }
+                redrawCanvas();
+                return;
+            }
+            
+            if (currentTool === 'line') {
+                showHelperLine = true;
+            }
+            
+            if (!isDrawing) {
+                redrawCanvas();
+                return;
+            }
+            
+            if (currentTool === 'line') {
+                const snappedY = snapToLine(y);
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+                
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = currentLineWidth;
+                ctx.lineCap = 'round';
+                
+                ctx.beginPath();
+                ctx.moveTo(tempStartX, tempStartY);
+                ctx.lineTo(x, snappedY);
+                ctx.stroke();
+                
+                if (snappedY === canvas.height) {
+                    drawArrowhead(tempStartX, tempStartY, x, snappedY, currentColor, currentLineWidth);
+                }
+                
+                if (showHelperLine) {
+                    ctx.strokeStyle = '#2196F3';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(mouseX, 0);
+                    ctx.lineTo(mouseX, canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', e => {
+            if (isMeasuring) {
+                const rect = canvas.getBoundingClientRect();
+                measureEndX = e.clientX - rect.left;
+                redrawCanvas();
+                drawMeasurement();
+                isMeasuring = false;
+                return;
+            }
+            
+            if (isSelecting) {
+                isSelecting = false;
+                selectLadderElements();
+                selection = null;
+                redrawCanvas();
+            }
+            
+            if (draggingEndpoint) {
+                draggingEndpoint = null;
+                saveState();
+                return;
+            }
+            
+            if (draggingSymbol !== null) {
+                draggingSymbol = null;
+                saveState();
+                return;
+            }
+            
+            if (isDrawing && currentTool === 'line') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const snappedY = snapToLine(y);
+            
+                lines.push({
+                    x1: tempStartX,
+                    y1: tempStartY,
+                    x2: x,
+                    y2: snappedY,
+                    color: currentColor,
+                    width: currentLineWidth
+                });
+            
+                const bottomSnap = snapLines[snapLines.length - 1];
+                if (Math.abs(snappedY - bottomSnap) < 1) {
+                    // Instead of just drawing, store it:
+                    symbols.push({
+                        x,
+                        y: snappedY,
+                        type: 'arrow',
+                        color: currentColor,
+                        size: currentLineWidth,
+                        lineAngle: Math.atan2(snappedY - tempStartY, x - tempStartX)
+                    });
+                }
+            
+                redrawCanvas();
+                saveState();
+            }
+            
+            if (isDrawing) {
+                isDrawing = false;
+                if (currentTool === 'eraser') {
+                    saveState();
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseenter', function() {
+            showHelperLine = true;
+        });
+        
+        canvas.addEventListener('mouseleave', function() {
+            isDrawing = false;
+            showHelperLine = false;
+            redrawCanvas();
+        });
+        canvas.addEventListener('click', e => {
+            if (!e.shiftKey) {
+                lines.forEach(l => l.selected = false);
+                symbols.forEach(s => s.selected = false);
+                redrawCanvas();
+            }
+        });
+        const drawDotBtn = document.getElementById('drawDot');
+        const symbolMenu = document.getElementById('symbolMenu');
+        const symbolLabel = document.getElementById('symbolLabel');
+        
+        
+        
+        drawDotBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentTool = 'dot';
+            document.querySelectorAll('.toolbar button').forEach(b => b.classList.remove('active'));
+            drawDotBtn.classList.add('active');
+            canvas.style.cursor = 'crosshair';
+            hoveredEndpoint = null;
+            hoveredSymbol = null;
+            redrawCanvas();
+        
+            // Toggle dropdown visibility
+            const isVisible = symbolMenu.style.display === 'block';
+            symbolMenu.style.display = isVisible ? 'none' : 'block';
+        });
+        
+        symbolMenu.querySelectorAll('div').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentSymbol = e.target.dataset.type;
+                symbolLabel.textContent = e.target.textContent;
+                symbolMenu.style.display = 'none';
+            });
+        });
+        
+        document.addEventListener('click', () => {
+            symbolMenu.style.display = 'none';
+        });
+        
+        overlay.addEventListener('mousedown', e => {
+          IMGisDrawing = true;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGstartX = (e.clientX - rect.left) * scaleX;
+          IMGstartY = (e.clientY - rect.top) * scaleY;
+        });
+        
+        overlay.addEventListener('mousemove', e => {
+          if (!IMGisDrawing) return;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGendX = (e.clientX - rect.left) * scaleX;
+          IMGendY = (e.clientY - rect.top) * scaleY;
+        
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+          ctx.strokeStyle = 'red';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(IMGstartX, IMGstartY, IMGendX - IMGstartX, IMGendY - IMGstartY);
+        });
+        
+        overlay.addEventListener('mouseup', async e => {
+          console.log('Overlay mouseup triggered');
+          if (!IMGisDrawing) {
+            console.log('Not drawing, returning');
+            return;
+          }
+          IMGisDrawing = false;
+          const rect = overlay.getBoundingClientRect();
+          const scaleX = overlay.width / rect.width;
+          const scaleY = overlay.height / rect.height;
+          IMGendX = (e.clientX - rect.left) * scaleX;
+          IMGendY = (e.clientY - rect.top) * scaleY;
+        
+          const cropX = Math.min(IMGstartX, IMGendX);
+          const cropY = Math.min(IMGstartY, IMGendY);
+          const cropW = Math.abs(IMGendX - IMGstartX);
+          const cropH = Math.abs(IMGendY - IMGstartY);
+          console.log('Crop dimensions:', cropW, cropH);
+          console.log('Crop position:', cropX, cropY);
+          if (cropW === 0 || cropH === 0) return;
+        
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = cropW;
+          tempCanvas.height = cropH;
+          const tempCtx = tempCanvas.getContext('2d');
+        
+          if (img) {
+            console.log('Drawing from image');
+            tempCtx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          } else if (pdfPage) {
+            console.log('Drawing from PDF with scale:', pdfScale);
+            // The coordinates are already in the scaled canvas space, so we can draw directly
+            tempCtx.drawImage(pdfCanvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+          }
+        
+          // Calculate scaling to fit within ecgHeight while maintaining aspect ratio
+          const targetHeight = ecgHeight;
+          const scale = Math.min(canvas.width / cropW, targetHeight / cropH);
+          const scaledW = cropW * scale;
+          const scaledH = cropH * scale;
+          
+          console.log('Scaled dimensions:', scaledW, scaledH);
+          
+          // Store the image data
+          ecgImage = {
+            canvas: tempCanvas,
+            width: scaledW,
+            height: scaledH,
+            originalWidth: scaledW,
+            originalHeight: scaledH
+          };
+          
+          // Reset scales to 100%
+          ecgImageHScale = 1.0;
+          ecgImageVScale = 1.0;
+          document.getElementById('hScaleSlider').value = 100;
+          document.getElementById('vScaleSlider').value = 100;
+          document.getElementById('hScaleValue').textContent = 100;
+          document.getElementById('vScaleValue').textContent = 100;
+          
+          // Show scale sliders
+          document.getElementById('imageScaleSelector').style.display = 'flex';
+         // document.getElementById('imageVScaleSelector').style.display = 'flex';
+          
+          console.log('ecgImage stored:', ecgImage);
+          
+          // Hide the preview after cropping
+          document.getElementById('preview-container').style.display = 'none';
+          clearPreview();
+          
+          // Redraw to show the image
+          console.log('Calling redrawCanvas');
+          redrawCanvas();
+        });
+        
+        // Click opens file dialog
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        // Highlight on drag
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('dragover');
+        
+          const files = e.dataTransfer.files;
+          if (files.length > 0) {
+            fileInput.files = files;
+            handleFiles(files);
+          }
+        });
+        
+
+
+    </script>
+</body>
+</html>
+                
