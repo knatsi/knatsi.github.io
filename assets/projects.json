@@ -3,40 +3,40 @@
     "id": "ecg-ladder",
     "title": "ECG Ladder Diagram",
     "description": "Online ECG Ladder Diagram Drawer",
-    "tags": ["JavaScript", "ECG", "Visualization"],
-    "image": "assets/images/ecg-visualizer.png",
+    "tags": ["XML, PDF or Image", "ECG", "Arrhythmia"],
+    "image": "assets/image/ecg-ladder.png",
     "link": "project-details.html?id=ecg-ladder",
-    "github": "https://knatsi.github.io/ECGladder.html",
-    "date": "2025-08-07"
+    "github": "https://knatsi.github.io/pages/ecgladder.html",
+    "date": "2025-11-07"
   },
   {
-    "id": "structured-data-api",
-    "title": "Structured Data Web API",
-    "description": "C# Web API integrating with Orthanc and Sectra to extract and serve structured DICOM SR measurement data.",
-    "tags": ["C#", "API", "DICOM", "Healthcare"],
-    "image": "assets/images/structured-data-api.png",
-    "link": "project-details.html?id=structured-data-api",
-    "github": "https://github.com/YourUser/StructuredDataAPI",
-    "date": "2025-07-17"
+    "id": "schemadr",
+    "title": "Läkarschema",
+    "description": "Ett sätt att veta vad man gör och när man ska göra det.",
+    "tags": ["Läkare", "Struktur", "Hjälp", "PDF"],
+    "image": "assets/image/schemadr.png",
+    "link": "project-details.html?id=schemadr",
+    "github": "https://knatsi.github.io/schemadr.pdf",
+    "date": "2025-11-13"
   },
   {
-    "id": "xml-to-json",
-    "title": "XML to JSON Converter",
-    "description": "Lightweight C# service that parses MeasurementExport XML files and outputs structured JSON.",
-    "tags": ["C#", "XML", "JSON"],
-    "image": "assets/images/xml-to-json.png",
-    "link": "project-details.html?id=xml-to-json",
-    "github": "https://github.com/YourUser/XML-to-JSON",
+    "id": "tools",
+    "title": "Verktygslista",
+    "description": "En lång lista på alla verktyg jag har till övers och gärna lånar ut.",
+    "tags": ["Verktyg", "Låna", "Green living"],
+    "image": "assets/image/tools.png",
+    "link": "project-details.html?id=tools",
+    "github": "https://knatsi.github.io/pages/tools.html",
     "date": "2025-05-28"
   },
   {
-    "id": "rental-webapp",
-    "title": "Item Rental Webpage",
-    "description": "Modern web interface for listing and requesting items for rent with live email integration.",
-    "tags": ["HTML", "JavaScript", "UI"],
-    "image": "assets/images/rental-webapp.png",
-    "link": "project-details.html?id=rental-webapp",
-    "github": "https://github.com/YourUser/RentalWebApp",
-    "date": "2025-03-03"
+    "id": "schemapreop",
+    "title": "Arbetsschema till kalenderfil",
+    "description": "Konvertera ditt arbetsschema till kalenderfil. Funkar för TimeCare.",
+    "tags": ["Schema", "iCal", ".ics", "Pre/Postop"],
+    "image": "assets/images/schemapreop.png",
+    "link": "project-details.html?id=schemapreop",
+    "github": "https://knatsi.github.io/schema/index.html",
+    "date": "2025-10-03"
   }
 ]
