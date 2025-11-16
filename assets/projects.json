@@ -10,6 +10,16 @@
     "date": "2025-11-07"
   },
   {
+    "id": "ptpischemia",
+    "title": "PTP vid Kroniskt Koronart syndrom",
+    "description": "Kalkylator för bedömning av pretest-sannolikhet för kroniskt koronart syndrom och förslag på utredning.",
+    "tags": ["PTP", "Kroniskt koronart syndrom", "Utredning"],
+    "image": "assets/image/ecg-ladder.png",
+    "link": "project-details.html?id=ptpischemia",
+    "github": "https://knatsi.github.io/ptpischemia.html",
+    "date": "2025-11-07"
+  },
+  {
     "id": "schemadr",
     "title": "Läkarschema",
     "description": "Ett sätt att veta vad man gör och när man ska göra det.",
