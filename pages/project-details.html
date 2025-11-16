@@ -31,7 +31,8 @@
       .then(projects => {
         const project = projects.find(p => p.id === projectId);
         const container = document.getElementById("project-viewer");
-
+        console.log(project);
+        
         if (!project) {
           container.innerHTML = `
             <div class="text-center p-10">
@@ -49,7 +50,7 @@
             frameborder="0"
           ></iframe>
         `;
-        console.log(Project);
+        
       })
       .catch(err => {
         console.error(err);
