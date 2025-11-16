@@ -49,21 +49,20 @@
             frameborder="0"
           ></iframe>
         `;
+        console.log(Project);
       })
       .catch(err => {
         console.error(err);
         document.getElementById("project-viewer").innerHTML = `
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
-//      if (projectId) {
-//        fetch("https://api.github.com/repos/knatsi/smtp2go-relay/issues/1/comments", {
-//          method: "POST",
-//          headers: {
-//            "Accept": "application/vnd.github+json",
-//          },
-//          body: JSON.stringify({ body: `view:${projectId}` })
-//        }).catch(err => console.error("View log failed:", err));
-//      }
+      if (project) {
+        fetch("https://knatsi.synology.me/counter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project })
+        }).catch(err => console.error("View log failed:", err));
+      }
       
   </script>
 </body>
