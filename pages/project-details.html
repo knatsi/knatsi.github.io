@@ -27,13 +27,21 @@
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get("id");
 
+    consol.log = "projectId"
+    if (projectId) {
+        fetch("https://knatsi.synology.me/counter", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId })
+        }).catch(err => console.error("View log failed:", err));
+      }
+
     // Load JSON and find project
     fetch("../assets/projects.json")
       .then(res => res.json())
       .then(projects => {
         const project = projects.find(p => p.id === projectId);
         const container = document.getElementById("project-viewer");
-        console.log(project);
         
         if (!project) {
           container.innerHTML = `
@@ -59,13 +67,7 @@
         document.getElementById("project-viewer").innerHTML = `
           <p class="text-center text-red-600 p-10">Error loading project data.</p>`;
       });
-      if (project) {
-        fetch("https://knatsi.synology.me/counter", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project })
-        }).catch(err => console.error("View log failed:", err));
-      }
+
       
   </script>
 </body>
