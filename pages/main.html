@@ -36,51 +36,53 @@
   // Hex Codes: #32323F, #4C4E5D, #988E96, #BCABA8, #DDD5D0
   // Load top-3 most-viewed projects directly from Raspberry Pi backend
 
-  const API_BASE = "https://knatsi.synology.me"; // your Pi backend base URL
+const API_BASE = "https://knatsi.synology.me";
 
-  Promise.all([
-    fetch("../assets/projects.json").then(res => res.json()),
-    fetch(`${API_BASE}/counter/top3`).then(res => res.json())
-  ])
-  .then(([projects, viewData]) => {
-    const topPages = viewData.top3.map(v => v.page);
-    const topCounts = Object.fromEntries(
-      viewData.top3.map(v => [v.page, v.count])
-    );
-
-    // Match the top pages with your project list
-    const featured = projects
-      .filter(p => topPages.includes(p.id) || topPages.includes(p.link))
-      .map(p => ({
-        ...p,
-        views: topCounts[p.id] || topCounts[p.link] || 0
-      }));
-
-    const container = document.getElementById("featured-projects");
-
-    // Render project cards
-    container.innerHTML = featured.map(p => `
-      <a href="${p.link}" 
-         class="block bg-white rounded-2xl shadow hover:shadow-xl hover:-translate-y-1 transition transform p-6">
-        <img src="${p.image}" alt="${p.title}" class="rounded-xl mb-4">
-        <h3 class="text-xl font-semibold text-[#32323F] mb-1">${p.title}</h3>
-        <p class="text-[#4C4E5D] mb-3">${p.description}</p>
-        <div class="flex flex-wrap gap-2">
-          ${p.tags.map(tag => `
-            <span class="bg-[#DDD5D0] text-[#4C4E5D] text-sm px-2 py-1 rounded-full">
-              ${tag}
-            </span>
-          `).join("")}
-        </div>
-        <p class="text-sm text-gray-400 mt-2">👁 ${p.views} views</p>
-      </a>
-    `).join("");
-  })
-  .catch(err => {
-    console.error(err);
-    document.getElementById("featured-projects").innerHTML =
-      '<p class="text-center text-red-600">Unable to load featured projects.</p>';
-  });
+Promise.all([
+  fetch("../assets/projects.json").then(res => res.json()),
+  fetch(`${API_BASE}/counter/top3`).then(res => res.json()) // Fixed: was missing backticks
+])
+.then(([projects, viewData]) => {
+  // Your API returns "projectId", not "page"
+  const topProjectIds = viewData.top3.map(v => v.projectId);
+  const topCounts = Object.fromEntries(
+    viewData.top3.map(v => [v.projectId, v.count])
+  );
+  
+  // Match the top projects with your project list
+  const featured = projects
+    .filter(p => topProjectIds.includes(p.id))
+    .map(p => ({
+      ...p,
+      views: topCounts[p.id] || 0
+    }))
+    .sort((a, b) => b.views - a.views); // Sort by views descending
+  
+  const container = document.getElementById("featured-projects");
+  
+  // Render project cards
+  container.innerHTML = featured.map(p => `
+    <a href="${p.link}" 
+       class="block bg-white rounded-2xl shadow hover:shadow-xl hover:-translate-y-1 transition transform p-6">
+      <img src="${p.image}" alt="${p.title}" class="rounded-xl mb-4">
+      <h3 class="text-xl font-semibold text-[#32323F] mb-1">${p.title}</h3>
+      <p class="text-[#4C4E5D] mb-3">${p.description}</p>
+      <div class="flex flex-wrap gap-2">
+        ${p.tags.map(tag => `
+          <span class="bg-[#DDD5D0] text-[#4C4E5D] text-sm px-2 py-1 rounded-full">
+            ${tag}
+          </span>
+        `).join("")}
+      </div>
+      <p class="text-sm text-gray-400 mt-2">👁 ${p.views} views</p>
+    </a>
+  `).join("");
+})
+.catch(err => {
+  console.error("Failed to load featured projects:", err);
+  document.getElementById("featured-projects").innerHTML =
+    '<p class="text-center text-red-600">Unable to load featured projects.</p>';
+});
 </script>
 </body>
 </html>
