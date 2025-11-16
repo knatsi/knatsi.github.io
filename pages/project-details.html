@@ -27,7 +27,7 @@
     const params = new URLSearchParams(window.location.search);
     const projectId = params.get("id");
 
-    consol.log = "projectId"
+    consol.log = "projectId";
     if (projectId) {
         fetch("https://knatsi.synology.me/counter", {
           method: "POST",
