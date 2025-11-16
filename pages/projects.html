@@ -40,7 +40,6 @@
         grid.innerHTML = projects.map(p => `
           <a href="${p.link}" 
              class="block bg-white rounded-2xl shadow hover:shadow-xl hover:-translate-y-1 transition transform p-6 cursor-pointer">
-            <img src="${p.image}" alt="${p.title}" class="rounded-xl mb-4">
             <h3 class="text-xl font-semibold text-[#32323F] mb-2">${p.title}</h3>
             <p class="text-[#4C4E5D] mb-3">${p.description}</p>
             <div class="flex flex-wrap gap-2">
