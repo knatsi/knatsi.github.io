@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KnaTsi | Articles</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="../assets/image/logo.png" />
+</head>
+
+<body class="bg-gray-50 text-[#32323F] flex flex-col min-h-screen">
+
+  <!-- Hero -->
+  <section class="text-center bg-[#32323F] text-gray-300 py-10">
+    <h1 class="text-5xl text-[#DDD5D0] font-extrabold mb-4">Articles</h1>
+    <p class="text-lg max-w-2xl mx-auto text-gray-400">
+      A collection of articles I’ve authored or co-authored, with special thanks to my colleague Dr. Lindow (data sourced from the CrossRef API).
+    </p>
+  </section>
+
+
+  <!-- Articles Grid -->
+  <main class="max-w-6xl mx-auto px-4 py-16 flex-grow">
+    <div id="article-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-[#32323F] text-[#BCABA8] py-6 mt-auto">
+    <div class="max-w-6xl mx-auto text-center">
+      <p>© 2025 <span class="text-[#DDD5D0] font-semibold">KnaTsi</span>. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Script -->
+<script>
+
+  const dois = [
+    "10.1111/anec.12484",
+    "10.1016/j.echo.2023.11.006",
+    "10.1080/14017431.2019.1705383",
+    "10.1093/ehjci/jead301",
+    "10.1007/s10554-025-03413-x",
+    "10.19080/JOCCT.2019.14.555880"
+  ];
+
+  function shortenAuthors(authors) {
+    if (authors.length <= 3) return authors.join(", ");
+    return authors.slice(0, 3).join(", ") + " et al.";
+  }
+
+  function shortenAbstract(text, max = 300) {
+    if (!text) return "No abstract available.";
+    if (text.length <= max) return text;
+    return text.substring(0, max) + "…";
+  }
+
+  async function fetchArticle(doi) {
+    const url = `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
+    const res = await fetch(url);
+
+    if (!res.ok) throw new Error("DOI not found: " + doi);
+
+    const data = await res.json();
+    const item = data.message;
+
+    const authors = item.author
+      ? item.author.map(a => `${a.family}, ${a.given}`)
+      : [];
+
+    return {
+      title: item.title?.[0] || "No title",
+      authors: authors,
+      shortAuthors: shortenAuthors(authors),
+      journal: item["container-title"]?.[0] || "Unknown journal",
+      year: item.created ? item.created["date-parts"][0][0] : "Unknown",
+      doi: doi,
+      abstract: shortenAbstract(
+        item.abstract ? item.abstract.replace(/<[^>]*>/g, "") : ""
+      ),
+      tags: item.subject || []
+    };
+  }
+
+  function renderArticles(list) {
+    const grid = document.getElementById("article-grid");
+
+    grid.innerHTML = list.map(a => `
+      <div class="bg-white rounded-xl shadow hover:shadow-xl hover:-translate-y-1 transition p-6">
+
+        <h3 class="text-xl font-semibold mb-2 text-[#32323F]">
+          ${a.title}
+        </h3>
+
+        <p class="text-sm mb-1">
+          <strong>Authors:</strong> ${a.shortAuthors}
+        </p>
+
+        <p class="text-sm mb-2">
+          <strong>Journal:</strong> ${a.journal} (${a.year})
+        </p>
+
+        <a href="https://doi.org/${a.doi}" target="_blank"
+          class="text-blue-700 underline text-sm">
+          DOI: ${a.doi}
+        </a>
+
+        <p class="mt-3 text-[#4C4E5D] leading-snug">${a.abstract}</p>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          ${a.tags.map(t => `
+            <span class="bg-[#DDD5D0] text-[#4C4E5D] text-xs px-2 py-1 rounded-full">${t}</span>
+          `).join("")}
+        </div>
+
+      </div>
+    `).join("");
+  }
+
+  async function loadArticles() {
+    const articles = [];
+
+    for (const doi of dois) {
+      try {
+        const art = await fetchArticle(doi);
+        articles.push(art);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    renderArticles(articles);
+  }
+
+
+  loadArticles();
+</script>
+
+
+</body>
+</html>
