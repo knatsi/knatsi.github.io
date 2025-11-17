@@ -6,11 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Ensure links open inside the content iframe -->
   <base target="content-frame">
 
   <style>
-    /* Prevent scrollbars and remove body margin inside iframe */
     html, body {
       margin: 0;
       padding: 0;
@@ -19,25 +17,25 @@
   </style>
 </head>
 <body>
-  <header class="w-full bg-white shadow-md z-50">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-      
-      <!-- Logo -->
-      <a href="main.html" class="flex items-center space-x-2">
-        <img src="../assets/image/logo.svg" alt="KnaTsi Logo" class="h-10">
-      </a>
+<header class="w-full bg-white shadow-md z-50">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+
+    <!-- Logo + Text -->
+    <a href="main.html" class="flex items-center space-x-2 min-w-0">
+      <img src="../assets/image/logo.svg" alt="KnaTsi Logo"
+           class="h-10 w-auto object-contain flex-shrink-0">
+      <span class="hidden md:flex text-xl font-semibold text-[#32323F] truncate">KnaTsi</span>
+    </a>
 
     <!-- Desktop Nav -->
-    <nav class="hidden md:flex space-x-6 font-medium text-[#32323F]">
+    <nav class="space-x-6 font-medium text-[#32323F]">
       <a href="main.html" class="hover:text-[#BCABA8]">Home</a>
       <a href="projects.html" class="hover:text-[#BCABA8]">Projects</a>
       <a href="about.html" class="hover:text-[#BCABA8]">About</a>
       <a href="contact.html" class="hover:text-[#BCABA8]">Contact</a>
     </nav>
 
+  </div>
 </header>
-
-<script>
-</script>
 </body>
-</html>  
+</html>
