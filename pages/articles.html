@@ -44,8 +44,8 @@
   ];
 
   function shortenAuthors(authors) {
-    if (authors.length <= 3) return authors.join(", ");
-    return authors.slice(0, 3).join(", ") + " et al.";
+    if (authors.length <= 3) return authors.join("; ");
+    return authors.slice(0, 3).join("; ") + " et al.";
   }
 
   function shortenAbstract(text, max = 300) {
