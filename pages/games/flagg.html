@@ -205,21 +205,16 @@
             </div>
             
             <div class="controls">
-                <button class="btn-prev" id="btn-prev">
-                    ← Föregående
-                </button>
                 <button class="btn-shuffle" id="btn-shuffle">
                     🎲 Slumpa
                 </button>
-                <button class="btn-next" id="btn-next">
-                    Nästa →
+                <button class="btn-reset" id="btn-reset">
+                    ↻ Börja om
                 </button>
             </div>
             
             <div class="controls">
-                <button class="btn-reset" id="btn-reset">
-                    ↻ Börja om
-                </button>
+
             </div>
         </div>
     </div>
@@ -290,17 +285,6 @@
             updateCard();
         }
 
-        function nextCard() {
-            isFlipped = false;
-            currentIndex = (currentIndex + 1) % countries.length;
-            updateCard();
-        }
-
-        function prevCard() {
-            isFlipped = false;
-            currentIndex = (currentIndex - 1 + countries.length) % countries.length;
-            updateCard();
-        }
 
         function shuffleCard() {
             isFlipped = false;
@@ -315,8 +299,6 @@
         }
 
         elements.flashcard.addEventListener('click', flipCard);
-        elements.btnPrev.addEventListener('click', prevCard);
-        elements.btnNext.addEventListener('click', nextCard);
         elements.btnShuffle.addEventListener('click', shuffleCard);
         elements.btnReset.addEventListener('click', resetCard);
 
