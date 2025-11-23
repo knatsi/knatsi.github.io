@@ -48,5 +48,15 @@
     "link": "project-details.html?id=schemapreop",
     "github": "https://knatsi.github.io/schema/index.html",
     "date": "2025-10-03"
+  },
+    {
+    "id": "flaggame",
+    "title": "Flashcards för Flaggor",
+    "description": "Lär dig hela världens flaggor!",
+    "tags": ["Skola", "Spel", "Flaggor"],
+    "image": "assets/images/flaggame.png",
+    "link": "project-details.html?id=flaggame",
+    "github": "https://knatsi.github.io/pages/games/flagg.html",
+    "date": "2025-11-23"
   }
 ]
