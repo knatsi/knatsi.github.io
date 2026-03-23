@@ -1,18 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Screen Snip OCR</title>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <title>Snip & Extract (No OCR)</title>
     <style>
         body { font-family: Arial; }
-        canvas { border: 1px solid black; margin-top: 10px; }
+        canvas { border: 1px solid #ccc; margin-top: 10px; }
         table { border-collapse: collapse; margin-top: 20px; }
         td, th { border: 1px solid #ccc; padding: 6px 10px; text-align:center;}
+        #overlay {
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background: rgba(0,0,0,0.4);
+            display:none;
+            cursor: crosshair;
+        }
     </style>
 </head>
 <body>
 
-<h2>Screen Snip → OCR → Segment Table</h2>
+<h2>Snip → Extract (No OCR)</h2>
 
 <label>Mode:</label>
 <select id="mode">
@@ -23,133 +30,138 @@
 
 <br><br>
 
-<button onclick="captureScreen()">Capture Snippet</button>
-<button onclick="runOCR()">Run OCR</button>
+<button onclick="startSnipping()">Start Snipping</button>
+<button onclick="processImage()">Extract Data</button>
 
-<br>
-<video id="video" autoplay style="display:none;"></video>
+<div id="overlay"></div>
+
 <canvas id="canvas"></canvas>
 
 <div id="output"></div>
 
 <script>
-let canvas = document.getElementById('canvas');
-let ctx = canvas.getContext('2d');
-let video = document.getElementById('video');
+let overlay = document.getElementById("overlay");
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
 
 let startX, startY, endX, endY;
+let screenshot;
 
-// Capture screen
-async function captureScreen() {
+// Start snipping
+async function startSnipping() {
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    const video = document.createElement("video");
     video.srcObject = stream;
+    await video.play();
 
-    video.onloadedmetadata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-    };
+    // draw full screen frame
+    let tempCanvas = document.createElement("canvas");
+    tempCanvas.width = video.videoWidth;
+    tempCanvas.height = video.videoHeight;
+    let tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(video, 0, 0);
+
+    screenshot = tempCanvas;
+
+    // stop stream
+    stream.getTracks().forEach(t => t.stop());
+
+    overlay.style.display = "block";
 }
 
-// Select crop area
-canvas.addEventListener('mousedown', e => {
-    startX = e.offsetX;
-    startY = e.offsetY;
+// Overlay selection
+overlay.addEventListener("mousedown", e => {
+    startX = e.clientX;
+    startY = e.clientY;
 });
 
-canvas.addEventListener('mouseup', e => {
-    endX = e.offsetX;
-    endY = e.offsetY;
+overlay.addEventListener("mouseup", e => {
+    endX = e.clientX;
+    endY = e.clientY;
 
-    let width = endX - startX;
-    let height = endY - startY;
+    let scaleX = screenshot.width / window.innerWidth;
+    let scaleY = screenshot.height / window.innerHeight;
 
-    let imageData = ctx.getImageData(startX, startY, width, height);
+    let sx = startX * scaleX;
+    let sy = startY * scaleY;
+    let sw = (endX - startX) * scaleX;
+    let sh = (endY - startY) * scaleY;
 
-    canvas.width = width;
-    canvas.height = height;
-    ctx.putImageData(imageData, 0, 0);
+    canvas.width = sw;
+    canvas.height = sh;
+
+    ctx.drawImage(screenshot, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    overlay.style.display = "none";
 });
 
-// OCR
-async function runOCR() {
-    const result = await Tesseract.recognize(canvas, 'eng');
-    const text = result.data.text;
+// Extract numbers WITHOUT OCR
+function processImage() {
+    let img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let data = img.data;
 
-    console.log(text);
-
-    let detectedMode = detectMode(text);
-    if (detectedMode) {
-        document.getElementById("mode").value = detectedMode;
+    // Convert to grayscale + threshold
+    for (let i = 0; i < data.length; i += 4) {
+        let avg = (data[i] + data[i+1] + data[i+2]) / 3;
+        let val = avg > 200 ? 255 : 0;
+        data[i] = data[i+1] = data[i+2] = val;
     }
 
-    let { values, global } = parseText(text);
-    renderTable(values, global);
+    ctx.putImageData(img, 0, 0);
+
+    // Detect rows (16 segments)
+    let rowHeight = canvas.height / 18; // includes header + global
+    let values = [];
+
+    for (let i = 0; i < 16; i++) {
+        let y = Math.floor((i + 1) * rowHeight);
+
+        let val = sampleNumber(y);
+        values.push(val);
+    }
+
+    let globalVal = sampleNumber(canvas.height - rowHeight);
+
+    render(values, globalVal);
 }
 
-// Detect mode from text
-function detectMode(text) {
-    text = text.toLowerCase();
+// crude number sampling (right side of image)
+function sampleNumber(y) {
+    let xStart = canvas.width * 0.6;
+    let xEnd = canvas.width * 0.95;
 
-    if (text.includes("mpr")) return "MPR";
-    if (text.includes("stress")) return "Stress";
-    if (text.includes("rest")) return "Rest";
+    let pixels = ctx.getImageData(xStart, y, xEnd - xStart, 20).data;
 
-    return null;
-}
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] === 0) count++;
+    }
 
-// Parse text
-function parseText(text) {
-    let lines = text.split('\n');
-    let values = new Array(16).fill("");
-    let globalValue = "";
-
-    lines.forEach(line => {
-
-        // Match segments
-        let match = line.match(/(\d+)\s+[A-Za-z]+\s+([\d.]+)/);
-        if (match) {
-            let index = parseInt(match[1]) - 1;
-            let value = match[2];
-
-            if (index >= 0 && index < 16) {
-                values[index] = value;
-            }
-        }
-
-        // Match GLOBAL
-        let globalMatch = line.match(/global\s+([\d.]+)/i);
-        if (globalMatch) {
-            globalValue = globalMatch[1];
-        }
-    });
-
-    return { values, global: globalValue };
+    // crude heuristic → convert density to value placeholder
+    // (we’ll refine this next step)
+    return count > 50 ? "detected" : "";
 }
 
 // Render table
-function renderTable(values, globalValue) {
+function render(values, globalVal) {
     let mode = document.getElementById("mode").value;
 
     let html = "<table>";
-
-    // Header
     html += "<tr><th>Mode</th>";
+
     for (let i = 1; i <= 16; i++) {
         html += `<th>${i}</th>`;
     }
+
     html += "<th>GLOBAL</th></tr>";
 
-    // Data row
     html += `<tr><td>${mode}</td>`;
-    values.forEach(v => {
-        html += `<td>${v}</td>`;
-    });
-    html += `<td>${globalValue}</td></tr>`;
+    values.forEach(v => html += `<td>${v}</td>`);
+    html += `<td>${globalVal}</td></tr>`;
 
     html += "</table>";
 
-    document.getElementById('output').innerHTML = html;
+    document.getElementById("output").innerHTML = html;
 }
 </script>
 
