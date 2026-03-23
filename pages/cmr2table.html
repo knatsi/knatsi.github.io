@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen Snip OCR</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        body { font-family: Arial; }
+        canvas { border: 1px solid black; margin-top: 10px; }
+        table { border-collapse: collapse; margin-top: 20px; }
+        td, th { border: 1px solid #ccc; padding: 6px 10px; text-align:center;}
+    </style>
+</head>
+<body>
+
+<h2>Screen Snip → OCR → Segment Table</h2>
+
+<label>Mode:</label>
+<select id="mode">
+    <option value="Stress">Stress</option>
+    <option value="Rest">Rest</option>
+    <option value="MPR">MPR</option>
+</select>
+
+<br><br>
+
+<button onclick="captureScreen()">Capture Snippet</button>
+<button onclick="runOCR()">Run OCR</button>
+
+<br>
+<video id="video" autoplay style="display:none;"></video>
+<canvas id="canvas"></canvas>
+
+<div id="output"></div>
+
+<script>
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
+let video = document.getElementById('video');
+
+let startX, startY, endX, endY;
+
+// Capture screen
+async function captureScreen() {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    video.srcObject = stream;
+
+    video.onloadedmetadata = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+    };
+}
+
+// Select crop area
+canvas.addEventListener('mousedown', e => {
+    startX = e.offsetX;
+    startY = e.offsetY;
+});
+
+canvas.addEventListener('mouseup', e => {
+    endX = e.offsetX;
+    endY = e.offsetY;
+
+    let width = endX - startX;
+    let height = endY - startY;
+
+    let imageData = ctx.getImageData(startX, startY, width, height);
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.putImageData(imageData, 0, 0);
+});
+
+// OCR
+async function runOCR() {
+    const result = await Tesseract.recognize(canvas, 'eng');
+    const text = result.data.text;
+
+    console.log(text);
+
+    let detectedMode = detectMode(text);
+    if (detectedMode) {
+        document.getElementById("mode").value = detectedMode;
+    }
+
+    let { values, global } = parseText(text);
+    renderTable(values, global);
+}
+
+// Detect mode from text
+function detectMode(text) {
+    text = text.toLowerCase();
+
+    if (text.includes("mpr")) return "MPR";
+    if (text.includes("stress")) return "Stress";
+    if (text.includes("rest")) return "Rest";
+
+    return null;
+}
+
+// Parse text
+function parseText(text) {
+    let lines = text.split('\n');
+    let values = new Array(16).fill("");
+    let globalValue = "";
+
+    lines.forEach(line => {
+
+        // Match segments
+        let match = line.match(/(\d+)\s+[A-Za-z]+\s+([\d.]+)/);
+        if (match) {
+            let index = parseInt(match[1]) - 1;
+            let value = match[2];
+
+            if (index >= 0 && index < 16) {
+                values[index] = value;
+            }
+        }
+
+        // Match GLOBAL
+        let globalMatch = line.match(/global\s+([\d.]+)/i);
+        if (globalMatch) {
+            globalValue = globalMatch[1];
+        }
+    });
+
+    return { values, global: globalValue };
+}
+
+// Render table
+function renderTable(values, globalValue) {
+    let mode = document.getElementById("mode").value;
+
+    let html = "<table>";
+
+    // Header
+    html += "<tr><th>Mode</th>";
+    for (let i = 1; i <= 16; i++) {
+        html += `<th>${i}</th>`;
+    }
+    html += "<th>GLOBAL</th></tr>";
+
+    // Data row
+    html += `<tr><td>${mode}</td>`;
+    values.forEach(v => {
+        html += `<td>${v}</td>`;
+    });
+    html += `<td>${globalValue}</td></tr>`;
+
+    html += "</table>";
+
+    document.getElementById('output').innerHTML = html;
+}
+</script>
+
+</body>
+</html>
